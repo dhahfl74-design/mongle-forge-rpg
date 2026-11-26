@@ -357,6 +357,19 @@
 <div class="toast-stack" id="toastStack"></div>
 <div class="fx-layer" id="fxLayer"></div>
 
+<script>
+  if ("serviceWorker" in navigator) {
+    var __swReloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", function () {
+      if (__swReloaded) return;
+      __swReloaded = true;
+      location.reload();
+    });
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("./sw.js").catch(function () {});
+    });
+  }
+  </script>
 <script src="./js/data.js"></script>
 <script src="./js/audio.js"></script>
 <script src="./js/engine.js"></script>
