@@ -7,8 +7,8 @@
 
   const G = (window.GAME = window.GAME || {});
 
-  G.VERSION = "3.1.0";
-  G.SAVE_KEY = "mongle_forge_save_v2";      // 기존 저장과 호환 (v3 저장은 자동 이전)
+  G.VERSION = "4.0.0";
+  G.SAVE_KEY = "mongle_forge_save_v2";      // 기존 저장과 호환 (v3·v4 저장은 자동 이전)
   G.LEGACY_KEYS = ["sword_enhancer_app_save_v1"];
   G.MAX_LV = 25;
 
@@ -262,8 +262,8 @@
   };
 
   G.STAGE_TUNE = {
-    normalHp: 2.6,
-    bossHpMul: 10,
+    normalHp: 4.4,
+    bossHpMul: 9,
     bossAtkMul: 1.2,
     goldBase: 12,
     goldGrowth: 1.5,
@@ -271,7 +271,52 @@
     expBase: 5,
     expGrowth: 1.42,
     bossExpMul: 6,
-    waveHeal: 0.07
+    waveHeal: 0.10,
+    mobAtkMul: 0.46          // 다수 몹이 동시에 때리므로 한 마리당 피해를 낮춘다
+  };
+
+  /* ---------------------------------------------------------------
+     다수 몹 몰이사냥 웨이브 설정
+     한 번에 8~14마리가 화면에 있고, 처치 할당량을 채우면 다음 웨이브
+     --------------------------------------------------------------- */
+  G.HORDE = {
+    waveQuota: 14,          // 웨이브당 처치 목표
+    maxAlive: 11,           // 동시에 살아 있는 최대 몹
+    burst: 9,               // 웨이브 시작 시 한꺼번에 등장
+    respawnGap: 0.42,       // 처치되면 다시 채워지는 간격
+    bossAdds: 4,            // 지배자방 동시 소환수
+    bossMaxAlive: 7,        // 지배자방 최대 생존(소환수만)
+    bossWaveQuota: 11
+  };
+
+  /* ---------------------------------------------------------------
+     3인 파티 동료
+     --------------------------------------------------------------- */
+  G.PARTY = [
+    {
+      id: "knight", name: "철벽 기사 가웨인", short: "가웨인", role: "vanguard",
+      icon: "🛡", color: "#7fb2ff", unlock: 0,
+      desc: "성문을 지키다 저주에 스며든 기사. 앞장서서 몹을 붙잡습니다.",
+      baseHp: 168, hpPer: 17, atkMul: 0.85, atkPer: 5.4, interval: 1.12,
+      range: 12.5, speed: 29,
+      skill: { name: "철벽 강타", icon: "🛡", cd: 5.2, power: 1.9, shape: "cone", radius: 21, half: 62,
+               hint: "전방 부채꼴을 내리쳐 도발합니다" }
+    },
+    {
+      id: "mage", name: "화염 술사 리안", short: "리안", role: "flame",
+      icon: "🔥", color: "#ff9a5c", unlock: 400,
+      desc: "성화를 훔쳐 달아난 술사. 멀리서 불덩이를 퍼붓습니다.",
+      baseHp: 104, hpPer: 10.5, atkMul: 1.12, atkPer: 7.2, interval: 1.45,
+      range: 30, speed: 27,
+      skill: { name: "화염 폭류", icon: "🔥", cd: 6.4, power: 2.3, shape: "circle", radius: 23, half: 180,
+               hint: "무리 한가운데에 불기둥을 세웁니다" }
+    }
+  ];
+
+  G.PARTY_LV = {
+    max: 60,
+    cost: (lv) => Math.round(150 * Math.pow(1.31, Math.max(0, lv - 1))),
+    stones: (lv) => (lv >= 20 ? 2 : lv >= 10 ? 1 : 0)
   };
 
   /* 지배자 패턴 */
@@ -296,24 +341,34 @@
     }
   };
 
-  /* 금지된 기술 */
+  /* 금지된 기술 — 세 기술 모두 진짜 공간 광역기 */
   G.SKILLS = [
     {
       id: "blossom", name: "혈월 참격", icon: "🌑", unlockLv: 1,
-      cd: 9, type: "damage", power: 2.4, perLevel: 0.12,
-      desc: "공격력 240%의 초승달 참격", useMsg: "혈월 참격!"
+      cd: 8, type: "damage", shape: "arc", radius: 27, half: 78,
+      power: 2.4, perLevel: 0.12,
+      desc: "전방 부채꼴의 모든 몹을 베는 초승달 참격", useMsg: "혈월 참격!"
     },
     {
       id: "jelly", name: "흡혈 성찬", icon: "🩸", unlockLv: 3,
-      cd: 22, type: "heal", power: 0.3, perLevel: 0.02,
-      desc: "최대 체력의 30% 흡수", useMsg: "흡혈 성찬!"
+      cd: 20, type: "heal", shape: "nova", radius: 26, half: 180,
+      power: 0.3, perLevel: 0.02, dmgPower: 1.35,
+      desc: "주변을 핏빛 파동으로 쓸고 파티 전원을 회복", useMsg: "흡혈 성찬!"
     },
     {
       id: "meteor", name: "심연 낙성", icon: "☄️", unlockLv: 5,
-      cd: 16, type: "damage", power: 4.2, perLevel: 0.18, alwaysCrit: true,
-      desc: "공격력 420%의 확정 치명타", useMsg: "심연 낙성!"
+      cd: 15, type: "damage", shape: "circle", radius: 31, half: 180,
+      power: 4.2, perLevel: 0.18, alwaysCrit: true,
+      desc: "무리 한가운데로 떨어지는 확정 치명타 운석", useMsg: "심연 낙성!"
     }
   ];
+
+  /* 파티 연계 궁극기 */
+  G.ULT = {
+    name: "성검 연계 · 심연 폭풍", icon: "✦",
+    power: 4.2, heal: 0.32, chargeMax: 100,
+    perKill: 7, perHit: 0.55, perWave: 12
+  };
 
   /* 유물 */
   G.RELICS = [
@@ -421,6 +476,9 @@
     "자리를 비우면 오프라인 보상이 쌓입니다. 모래시계 유물로 늘릴 수 있습니다.",
     "지나온 구역을 다시 골라 골드와 룬석을 모을 수 있습니다.",
     "치명타 확률은 저주받은 네잎 유물로 올립니다.",
-    "전투 화면 아래 스킬창에서 공격·방어·회피·카운터를 직접 누를 수 있습니다."
+    "전투 화면 아래 스킬창에서 공격·방어·회피·카운터를 직접 누를 수 있습니다.",
+    "몹은 무리 지어 몰려옵니다. 한 번의 베기로 최대 5~6마리를 함께 벨 수 있습니다.",
+    "파티 칩(좌측 상단)을 누르면 그 영웅으로 조종권이 넘어갑니다. 동료는 스스로 싸웁니다.",
+    "처치와 타격으로 궁극기 게이지가 차오릅니다. 가득 차면 화면 오른쪽 ✦ 버튼을 누르세요."
   ];
 })();

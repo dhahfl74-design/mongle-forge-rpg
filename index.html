@@ -141,23 +141,10 @@
           <div class="skill-list" id="skillList"></div>
         </div>
 
-        <!-- 전투 (보스 아레나 · 전체 화면) -->
+        <!-- 전투 (캔버스 아레나 · 전체 화면) -->
         <div id="battleView" class="battle-wrap hidden">
-          <div class="battle-scene" id="battleScene">
-            <canvas class="vfx-canvas" id="vfxCanvas"></canvas>
-            <div class="bf-tint" id="bfTint"></div>
-            <div class="bf-sky"></div>
-            <div class="bf-moon"></div>
-            <div class="bf-pillars l"></div>
-            <div class="bf-pillars r"></div>
-            <div class="bf-arch"></div>
-            <div class="bf-banners"><i></i><i></i><i></i></div>
-            <div class="bf-fog f1"></div>
-            <div class="bf-fog f2"></div>
-            <div class="bf-rune" id="bfRune"></div>
-            <div class="bf-ground"></div>
-            <div class="scene-deco d1" id="deco1">🕯️</div>
-            <div class="scene-deco d2" id="deco2">🦇</div>
+          <div class="battle-scene v4" id="battleScene">
+            <canvas id="arenaCanvas" class="arena-canvas" aria-label="전투 아레나"></canvas>
 
             <div class="battle-top">
               <button class="mini-btn retreat" id="fleeBtn">⟵ 퇴각</button>
@@ -171,24 +158,19 @@
             <div class="wave-pips" id="wavePips"></div>
             <div class="combo-chip" id="comboChip">연속 3</div>
 
-            <div class="arena field-mode" id="arenaEl">
-              <div class="zone-layer" id="zoneLayer"></div>
-              <div class="fighter hero-fighter" id="heroFighter">
-                <div class="sprite-wrap" id="heroSprite"></div>
-                <div class="fighter-name">서약자</div>
-                <div class="bar hp"><i id="fightHeroHp"></i></div>
-              </div>
-              <div class="fighter enemy-fighter" id="enemyFighter">
-                <div class="tap-hint" id="tapHint">강타!</div>
-                <div class="sprite-wrap" id="enemySprite"></div>
-                <div class="fighter-name" id="enemyName">부패한 점액</div>
-                <div class="bar enemy"><i id="fightEnemyHp"></i><span id="enemyHpText">28 / 28</span></div>
-              </div>
-              <div class="move-pad" id="movePad" aria-label="이동 조이스틱">
-                <div class="mp-knob" id="mpKnob"></div>
-              </div>
-              <button class="dash-btn" id="dashBtn" aria-label="회피 대시"><span class="db-ico">»</span><em class="db-txt">대시</em><i></i></button>
+            <div class="party-strip" id="partyStrip"></div>
+
+            <button class="ult-btn" id="ultBtn" aria-label="파티 궁극기">
+              <span class="ult-ico">✦</span>
+              <em class="ult-txt">궁극기</em>
+              <i class="ult-fill" id="ultFill"></i>
+              <b class="ult-pct" id="ultPct">0%</b>
+            </button>
+
+            <div class="move-pad" id="movePad" aria-label="이동 조이스틱">
+              <div class="mp-knob" id="mpKnob"></div>
             </div>
+            <button class="dash-btn" id="dashBtn" aria-label="회피 대시"><span class="db-ico">»</span><em class="db-txt">대시</em><i></i></button>
             <div class="scene-vignette" id="sceneVignette"></div>
           </div>
 
@@ -225,9 +207,23 @@
             <span>⚒ <b id="biWeapon">+0</b></span>
             <span>⚔ <b id="biAtk">10</b></span>
             <span>🎯 <b id="biCrit">8%</b></span>
-            <span class="bi-tip">조이스틱/WASD 이동 · Space 공격 · Shift 대시 · 1·2·3 기술</span>
+            <span class="bi-tip">조이스틱/WASD 이동 · Space 광역 베기 · Shift 대시 · 1·2·3 기술 · 탭으로 리더 교체</span>
           </div>
         </div>
+      </section>
+
+      <!-- ---------------- 3인 파티 ---------------- -->
+      <section class="tab-page" id="tab-party">
+        <div class="party-head">
+          <div class="ph-ico">👥</div>
+          <div class="ph-copy">
+            <b>3인 파티</b>
+            <span>동료가 함께 싸웁니다 · 리더를 바꾸면 직접 조종합니다</span>
+          </div>
+          <span class="chip gold">🗡 <b id="partyLeadName">서약자</b></span>
+        </div>
+        <div class="party-list" id="partyList"></div>
+        <div class="tip-box" id="partyTip">💡 동료는 스스로 몹을 몰고 기술을 씁니다. 파티 칸을 누르면 그 영웅으로 조종권이 넘어갑니다.</div>
       </section>
 
       <!-- ---------------- 대장간 ---------------- -->
@@ -412,8 +408,8 @@
           <div class="save-info" id="saveInfo">자동 저장 준비 중…</div>
           <div class="tip-box" id="tipBox">💡 팁: +5강부터 실패하면 단계가 내려가고, +10강부터는 검이 부서질 수 있습니다.</div>
           <div class="credits">
-            심연의 대장간 v3.1 · 저주받은 성검<br />
-            15개 황폐한 세계 · 180개 원정 구역 · 지배자 15종<br />
+            심연의 대장간 v4.0 · 저주받은 성검<br />
+            15개 세계 · 180개 구역 · 3인 파티 · 다수 몹 몰이사냥 · 지배자 15종<br />
             원작: 전설의 대장장이 — 다크 판타지 강화·사냥 RPG로 재단장 ⚔
           </div>
         </div>
@@ -454,6 +450,9 @@
       <button class="nav-btn" data-tab="relic">
         <span class="nav-ico">🔮</span><span class="nav-label">유물</span>
       </button>
+      <button class="nav-btn" data-tab="party">
+        <span class="nav-ico">👥</span><span class="nav-label">파티</span>
+      </button>
       <button class="nav-btn" data-tab="codex">
         <span class="nav-ico">📖</span><span class="nav-label">도감·설정</span>
         <span class="nav-badge" id="navBadge"></span>
@@ -476,6 +475,7 @@
   <script src="./js/data.js"></script>
   <script src="./js/sprites.js"></script>
   <script src="./js/core.js"></script>
+  <script src="./js/arena.js"></script>
   <script src="./js/vfx.js"></script>
   <script src="./js/ui.js"></script>
 </body>
