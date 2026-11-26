@@ -1,18 +1,16 @@
-/* 몽글 대장간 — 오프라인 캐시 서비스 워커 */
-const CACHE_NAME = "abyss-forge-v4-horde-arena";
+/* 심연의 대장간 v5.0 — 오프라인 캐시 (상자깡 리부트) */
+const CACHE_NAME = "abyss-forge-v5-lootbox-art1";
 const ASSETS = [
   "./",
   "./index.html",
   "./css/style.css",
   "./js/data.js",
-  "./js/sprites.js",
-  "./js/core.js",
-  "./js/arena.js",
-  "./js/vfx.js",
+  "./js/audio.js",
+  "./js/engine.js",
   "./js/ui.js",
   "./manifest.json",
-  "./assets/arena-bg.jpg",
   "./assets/forge-bg.jpg",
+  "./assets/arena-bg.jpg",
   "./assets/hero.png",
   "./assets/boss-demon.png",
   "./assets/boss-dragon.png",
@@ -20,6 +18,31 @@ const ASSETS = [
   "./assets/monster-fiend.png",
   "./assets/monster-undead.png",
   "./assets/sword-mythic.png",
+  "./assets/items/armor_epic.webp",
+  "./assets/items/armor_legend.webp",
+  "./assets/items/armor_myth.webp",
+  "./assets/items/armor_normal.webp",
+  "./assets/items/armor_rare.webp",
+  "./assets/items/armor_uncommon.webp",
+  "./assets/items/chest-ornate.webp",
+  "./assets/items/helm_epic.webp",
+  "./assets/items/helm_legend.webp",
+  "./assets/items/helm_myth.webp",
+  "./assets/items/helm_normal.webp",
+  "./assets/items/helm_rare.webp",
+  "./assets/items/helm_uncommon.webp",
+  "./assets/items/ring_epic.webp",
+  "./assets/items/ring_legend.webp",
+  "./assets/items/ring_myth.webp",
+  "./assets/items/ring_normal.webp",
+  "./assets/items/ring_rare.webp",
+  "./assets/items/ring_uncommon.webp",
+  "./assets/items/weapon_epic.webp",
+  "./assets/items/weapon_legend.webp",
+  "./assets/items/weapon_myth.webp",
+  "./assets/items/weapon_normal.webp",
+  "./assets/items/weapon_rare.webp",
+  "./assets/items/weapon_uncommon.webp",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./icons/icon-maskable-512.png"
@@ -44,8 +67,6 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   const url = new URL(event.request.url);
-
-  // 외부(폰트) 요청은 네트워크 우선
   if (url.origin !== self.location.origin) {
     event.respondWith(
       fetch(event.request).then((res) => {
@@ -56,8 +77,6 @@ self.addEventListener("fetch", (event) => {
     );
     return;
   }
-
-  // 앱 셸: 캐시 우선 + 백그라운드 갱신
   event.respondWith(
     caches.match(event.request).then((cached) => {
       const network = fetch(event.request).then((res) => {
