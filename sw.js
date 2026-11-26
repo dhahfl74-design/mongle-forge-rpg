@@ -1,5 +1,5 @@
-/* 심연의 대장간 v5.0 — 오프라인 캐시 (상자깡 리부트) */
-const CACHE_NAME = "abyss-forge-v5-lootbox-art3";
+/* 심연의 대장간 v5.1 — 오프라인 캐시 (장비 보관함) */
+const CACHE_NAME = "abyss-forge-v5.1-inventory";
 const ASSETS = [
   "./",
   "./index.html",

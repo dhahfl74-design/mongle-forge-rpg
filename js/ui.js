@@ -18,6 +18,7 @@
     cxSlot: "all",
     recent: [],
     newCodex: 0,
+    newInv: 0,
     autoTimer: 0,
     lastEnemyKey: "",
     modal: null,
@@ -314,6 +315,65 @@
     $("#slotsGrid").innerHTML = G.SLOTS.map(slotCard).join("");
   }
 
+  /* ================= 보관함 ================= */
+  function invDiff(it) {
+    const eq = S.equip[it.slot];
+    if (!eq) return { cls: "up", text: "빈 슬롯 · 바로 장착" };
+    const mine = G.itemScore(it);
+    const theirs = G.itemScore(eq);
+    const ratio = mine / Math.max(1, theirs);
+    const pct = ratio >= 10 ? Math.round(ratio) + "배" : Math.round(Math.abs(ratio - 1) * 100) + "%";
+    if (mine > theirs + 0.0001) return { cls: "up", text: "▲ " + pct + " 더 강함" };
+    if (mine < theirs - 0.0001) return { cls: "down", text: "▼ " + pct + " 약함" };
+    return { cls: "same", text: "= 장착품과 동급" };
+  }
+
+  function invNewCount() {
+    return S.inventory.filter((it) => it && it.isNewInv).length;
+  }
+
+  function renderInventory() {
+    const grid = $("#invGrid");
+    if (!grid) return;
+    const n = G.invCount();
+    const max = G.invMax();
+    const cnt = $("#invCount");
+    cnt.textContent = n + " / " + max;
+    cnt.classList.toggle("full", n >= max);
+    const sub = $("#invSub");
+    if (sub) sub.textContent = n >= max ? "가득 찼습니다 · 약한 장비를 일괄 분해하세요" : "획득 장비 자동 보관 · 전투력 순";
+    if (!n) {
+      grid.innerHTML = '<div class="inv-empty">보관함이 비어 있습니다.<br /><b>상자에서 나온 장비는 자동으로 여기에 쌓입니다.</b></div>';
+      return;
+    }
+    grid.innerHTML = G.invSorted().map((it) => {
+      const r = rar(it.rarity);
+      const diff = invDiff(it);
+      return '<div class="inv-item" style="border-color:' + r.color + '44">' +
+        (it.isNewInv ? '<span class="ii-new"></span>' : "") +
+        '<div class="ii-top">' +
+          '<div class="ii-ico" style="border-color:' + r.color + '44">' + iconImg(it) + '</div>' +
+          '<div class="ii-body">' +
+            '<div class="ii-name" style="color:' + r.color + '">' + esc(it.name) + '</div>' +
+            '<div class="ii-meta">' + r.name + ' · ' + G.SLOT_BY_KEY[it.slot].name + ' · 공 ' + G.fmt(G.itemAtk(it)) + '</div>' +
+            '<div class="ii-diff ' + diff.cls + '">' + diff.text + '</div>' +
+          '</div>' +
+          (it.lv ? '<span class="ii-lv">+' + it.lv + '</span>' : "") +
+        '</div>' +
+        '<div class="ii-actions">' +
+          '<button class="ii-eq" data-inv-equip="' + esc(it.uid) + '">장착</button>' +
+          '<button class="ii-forge" data-inv-forge="' + esc(it.uid) + '">모루</button>' +
+          '<button class="ii-sal" data-inv-salvage="' + esc(it.uid) + '">분해</button>' +
+        '</div></div>';
+    }).join("");
+  }
+
+  function clearInvNew() {
+    let touched = false;
+    S.inventory.forEach((it) => { if (it.isNewInv) { delete it.isNewInv; touched = true; } });
+    if (touched) G.saveSoon();
+  }
+
   function forgeItemCard() {
     const it = S.forgeItem;
     if (!it) {
@@ -494,6 +554,8 @@
   function renderNav() {
     $$(".nav-btn").forEach((b) => b.classList.toggle("active", b.dataset.tab === ui.tab));
     $("#dotChest").classList.toggle("show", S.chest.auto && S.keys > 0);
+    const dotForge = $("#dotForge");
+    if (dotForge) dotForge.classList.toggle("show", ui.tab !== "forge" && invNewCount() > 0);
   }
 
   function renderAll() {
@@ -501,6 +563,7 @@
     renderHud();
     renderChest();
     renderSlots();
+    renderInventory();
     forgeItemCard();
     renderResearch();
     renderCodex();
@@ -526,6 +589,7 @@
     ui.tab = tab;
     $$(".page").forEach((p) => p.classList.toggle("active", p.id === "page-" + tab));
     if (tab === "codex") ui.newCodex = 0;
+    if (tab === "forge") { clearInvNew(); renderInventory(); }
     renderNav();
     renderCodex();
     $("#content").scrollTop = 0;
@@ -553,6 +617,14 @@
   function showReveal(item) {
     const r = rar(item.rarity);
     const eq = S.equip[item.slot];
+    const storedNow = !!G.invFind(item.uid);
+    const note = item.equippedNow
+      ? '<div class="reveal-stored equip">⚔ 자동 장착되었습니다</div>'
+      : item.salvaged
+        ? '<div class="reveal-stored warn">🎒 보관함이 가득 차 분해되었습니다</div>'
+        : storedNow
+          ? '<div class="reveal-stored">🎒 보관함에 저장되었습니다 · 나중에 장착할 수 있습니다</div>'
+          : '';
     const html = '<button class="modal-close" data-close>' + svg("close") + '</button>' +
       '<div class="reveal-stage" style="--rv:' + r.beam + ';--rc:' + r.color + '">' +
       '<div class="reveal-rays"></div><div class="reveal-halo"></div><div class="reveal-pedestal"></div>' +
@@ -561,7 +633,8 @@
       '<div class="reveal-rarity" style="color:' + r.color + '">' + r.name + '</div>' +
       '<div class="reveal-itemname" style="color:' + r.color + '">' + esc(item.name) + '</div>' +
       (item.isNew ? '<div class="reveal-new">NEW 도감 등록</div>' : "") +
-      itemCardBody(item, { compact: true });
+      note +
+      itemCardBody(item, { compact: true, reveal: true });
     const back = openModal(html, "reveal-modal item-card");
     bindItemActions(back, item, { reveal: true });
   }
@@ -577,30 +650,29 @@
     }).join("");
     const html = '<button class="modal-close" data-close>' + svg("close") + '</button>' +
       '<div class="modal-title">10연 개봉 결과</div>' +
+      '<div class="modal-note" style="margin-bottom:9px">획득한 장비는 🎒 보관함에 저장됩니다</div>' +
       '<div class="batch-grid">' + cells + '</div>' +
       '<div class="batch-actions"><button class="btn btn-ghost" data-close>닫기</button>' +
+      '<button class="btn btn-ghost" data-open-inv>보관함</button>' +
       '<button class="btn btn-gold" data-salvage-low>영웅 미만 분해</button></div>';
     G.sfx("reveal", rar(best.rarity).idx);
     const back = openModal(html);
     back.querySelector("[data-salvage-low]").addEventListener("click", () => {
-      let gold = 0, n = 0;
-      items.forEach((it) => {
-        if (it.salvaged) return;
-        if (rar(it.rarity).idx < 3) {
-          const r = G.salvage(it);
-          gold += r.gold; n += 1;
-          it.salvaged = true;
-        }
-      });
-      if (n) {
-        G.state.gold += gold;
-        G.saveSoon();
-        toast("🗑 " + n + "개 분해 · +" + G.fmt(gold) + " G");
+      const targets = items.filter((it) => !it.salvaged && rar(it.rarity).idx < 3);
+      if (!targets.length) { toast("분해할 장비가 없습니다"); return; }
+      const r = G.salvageMany(targets);
+      if (r.count) {
+        toast("🗑 " + r.count + "개 분해 · +" + G.fmt(r.gold) + " G" + (r.stones ? " · 💠" + r.stones : ""));
+        G.sfx("gold");
         closeModal();
         renderAll();
-      } else {
-        toast("분해할 장비가 없습니다");
       }
+    });
+    const invBtn = back.querySelector("[data-open-inv]");
+    if (invBtn) invBtn.addEventListener("click", () => {
+      closeModal();
+      switchTab("forge");
+      scrollToInv();
     });
     back.querySelectorAll("[data-batch]").forEach((b) => {
       b.addEventListener("click", () => {
@@ -648,12 +720,13 @@
       }).join("") + '</div>' : "") +
       '<div class="ic-cmp"><div class="ic-cmp-title">' + (eq && !isEq ? "장착 중 · " + esc(eq.name) + " 와 비교" : isEq ? "현재 장착 중" : "장착 슬롯 비어 있음") + '</div>' +
       rows.join("") + '</div>' +
-      '<div class="ic-actions">' +
+      '<div class="ic-actions' + (opts && opts.reveal && !isEq ? " three" : "") + '">' +
       (isEq ? '<button class="btn btn-ghost" disabled>장착 중</button>' :
         '<button class="btn btn-gold" data-equip>' + svg("sword", "btn-ico") + ' 장착</button>' +
-        '<button class="btn salvage" data-salvage">분해</button>') +
+        (opts && opts.reveal ? '<button class="btn btn-ghost" data-store>🎒 보관</button>' : "") +
+        '<button class="btn salvage" data-salvage>분해</button>') +
       '</div>' +
-      '<div class="ic-tip">' + (isEq ? "" : eq ? "장착하면 기존 장비는 자동 분해됩니다" : "장착 즉시 전투력이 반영됩니다") + '</div>';
+      '<div class="ic-tip">' + (isEq ? "" : eq ? (G.invFull() ? "보관함이 가득 찼습니다 · 장착하면 기존 장비는 분해됩니다" : "장착하면 기존 장비는 보관함으로 이동합니다") : "장착 즉시 전투력이 반영됩니다") + '</div>';
   }
 
   function cmpRow(name, mine, theirs, isEq, cfg, pct) {
@@ -684,6 +757,30 @@
       closeModal();
       renderAll();
     });
+    const storeBtn = root.querySelector("[data-store]");
+    if (storeBtn) storeBtn.addEventListener("click", () => {
+      if (!G.invFind(item.uid) && !(S.equip[item.slot] && S.equip[item.slot].uid === item.uid)) G.storeItem(item);
+      G.sfx("tap");
+      toast("🎒 " + item.name + " · 보관함에 보관");
+      closeModal();
+      renderAll();
+    });
+    // 개봉 카드를 그냥 닫아도 장비는 보관함에 남아 있다
+    if (opts && opts.reveal) {
+      root.querySelectorAll("[data-close]").forEach((b) => b.addEventListener("click", () => {
+        if (G.invFind(item.uid)) toast("🎒 " + item.name + " · 보관함에 보관", "reward");
+      }));
+    }
+  }
+
+  function scrollToInv() {
+    const card = $("#invCard");
+    if (!card) return;
+    card.classList.remove("flash-inv");
+    void card.offsetWidth;
+    card.classList.add("flash-inv");
+    setTimeout(() => card.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
+    setTimeout(() => card.classList.remove("flash-inv"), 1300);
   }
 
   /* ================= 구역 선택 ================= */
@@ -779,6 +876,71 @@
       renderSlots(); forgeItemCard();
     });
     $("#forgeClear").addEventListener("click", () => { G.setForgeItem(null); renderSlots(); forgeItemCard(); });
+
+    // 보관함
+    $("#invBulkBtn").addEventListener("click", () => {
+      const box = $("#invTools");
+      box.classList.toggle("open");
+      G.sfx("tap");
+    });
+    $("#invTools").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-bulk]");
+      if (!b) return;
+      const mode = b.dataset.bulk;
+      const list = G.bulkTargets(mode);
+      if (!list.length) {
+        toast(mode === "weaker" ? "장착품보다 약한 장비가 없습니다" : "희귀 이하 장비가 없습니다");
+        G.sfx("error");
+        return;
+      }
+      const gold = list.reduce((a, it) => a + G.salvage(it).gold, 0);
+      const label = mode === "weaker" ? "장착품보다 약한 장비" : "희귀 이하 장비";
+      confirmModal("🎒 일괄 분해",
+        label + " <b>" + list.length + "개</b>를 분해합니다.<br />예상 보상 · 🪙 <b>+" + G.fmt(gold) + " G</b> · 💠 강화석",
+        () => {
+          const r = G.bulkSalvage(mode);
+          G.sfx("gold");
+          renderAll();
+          if (r.count) toast("🗑 " + r.count + "개 분해 · +" + G.fmt(r.gold) + " G" + (r.stones ? " · 💠" + r.stones : ""));
+        });
+    });
+    $("#invGrid").addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-inv-equip], button[data-inv-forge], button[data-inv-salvage]");
+      if (!b) return;
+      const uid = b.dataset.invEquip || b.dataset.invForge || b.dataset.invSalvage;
+      const it = G.invFind(uid);
+      if (!it) { renderAll(); return; }
+      if (b.dataset.invEquip) {
+        G.equipItem(it);
+        G.tutorialDone("equip");
+        G.sfx("success");
+        haptic(18);
+        renderAll();
+        return;
+      }
+      if (b.dataset.invForge) {
+        G.setForgeItem(it);
+        G.sfx("tap");
+        renderSlots();
+        forgeItemCard();
+        const fc = $(".forge-card");
+        if (fc) fc.scrollIntoView({ behavior: "smooth", block: "center" });
+        toast("⚒ " + it.name + " · 모루에 올렸습니다");
+        return;
+      }
+      const doSalvage = () => {
+        G.salvageItem(it);
+        G.sfx("gold");
+        renderAll();
+      };
+      if (rar(it.rarity).idx >= 3) {
+        confirmModal("🗑 장비 분해",
+          "<b style=\"color:" + rar(it.rarity).color + "\">" + esc(it.name) + "</b> 을(를) 분해합니다.<br />되돌릴 수 없습니다.",
+          doSalvage);
+      } else {
+        doSalvage();
+      }
+    });
     $("#equipBtn").addEventListener("click", () => {
       if (!S.forgeItem) return;
       G.equipItem(S.forgeItem);
@@ -911,6 +1073,8 @@
         if (!text) return;
         try {
           G.importSave(text);
+          S = G.state;
+          ui.newInv = 0;
           closeModal();
           renderAll();
           stageChanged();
@@ -924,7 +1088,9 @@
     $("#resetBtn").addEventListener("click", () => {
       confirmModal("🧹 처음부터", "모든 진행·장비·도감이 사라집니다. 되돌릴 수 없습니다.", () => {
         G.reset();
+        S = G.state;
         ui.recent = [];
+        ui.newInv = 0;
         renderAll();
         stageChanged();
         toast("새로 시작합니다");
@@ -995,15 +1161,12 @@
       if (!res.ok) return;
       const it = res.items[0];
       addRecent(it);
-      if (S.chest.autoEquip && !it.salvaged) {
-        const eq = S.equip[it.slot];
-        if (!eq || G.itemScore(it) > G.itemScore(eq)) {
-          G.equipItem(it);
-        }
-      }
+      // 자동 장착은 G.pull 안에서 처리된다
       renderWallet("keys");
       renderChest();
       renderSlots();
+      renderInventory();
+      renderNav();
       if (ui.tab === "forge") forgeItemCard();
       renderCodex();
       renderAchievements();
@@ -1066,6 +1229,8 @@
     G.bus.on("frame", (v) => renderFrame(v));
     G.bus.on("heroLevel", (lv) => { levelBanner(lv); renderHud(); });
     G.bus.on("codex", () => { ui.newCodex += 1; renderCodex(); });
+    G.bus.on("inventory", () => { renderInventory(); renderNav(); });
+    G.bus.on("equip", () => { renderInventory(); renderNav(); });
     G.bus.on("pull", () => { renderWallet("keys"); });
     G.bus.on("enhance", () => { renderWallet(); });
     G.bus.on("tutorial", () => renderQuest());
