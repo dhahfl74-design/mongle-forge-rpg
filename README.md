@@ -92,6 +92,7 @@ gh run download <run-id> -n mongle-forge-apk -D ./apk
 ```
 www/
   index.html            게임 화면 (전체 화면 배틀 아레나 · 스킬 컨트롤 바 포함)
+  assets/               고해상도 다크 판타지 일러스트 (아레나/대장간/영웅/지배자/성검)
   css/style.css         흑요석 다크 판타지 테마 · 세로/가로 모드 레이아웃
   js/data.js            검 26단계 · 세계 15개 · 몬스터 45종 · 패턴 · 유물 · 업적 데이터
   js/sprites.js         오리지널 SVG 스프라이트 (발광 눈빛 · 저주받은 검)
