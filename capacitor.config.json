@@ -1,12 +1,12 @@
 {
-  "appId": "com.mongle.forge",
-  "appName": "몽글 대장간: 별빛 성검 키우기",
+  "appId": "com.abyssforge.rpg",
+  "appName": "심연의 대장간",
   "webDir": "www",
   "server": {
     "androidScheme": "https"
   },
   "android": {
     "allowMixedContent": false,
-    "backgroundColor": "#fff8ef"
+    "backgroundColor": "#06050a"
   }
 }

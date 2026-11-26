@@ -1,6 +1,6 @@
 /* =====================================================================
-   몽글 대장간 — 아트 (sprites.js)
-   말랑한 몽글 생물 SVG 스프라이트 + 성검 일러스트
+   심연의 대장간 — 아트 (sprites.js, DARK FANTASY)
+   흑요석 몸체 + 발광하는 룬 테두리의 저주받은 존재들, 성검 일러스트
    ===================================================================== */
 (function () {
   "use strict";
@@ -8,268 +8,270 @@
 
   const SP = {};
 
-  function eyes(cx, cy, gap, size, mood) {
-    const r = size || 4.6;
+  const INK = "#07050c";        // 눈 · 그림자
+  const EYE_HOT = "#ff4d5e";    // 몬스터 눈빛 (기본)
+
+  /* ---------- 얼굴 ---------- */
+  function eyes(cx, cy, gap, size, mood, hot) {
+    const r = size || 4.4;
     const lx = cx - gap;
     const rx = cx + gap;
-    let e = `
-      <ellipse cx="${lx}" cy="${cy}" rx="${r}" ry="${r + 0.8}" fill="#4a3a30"/>
-      <ellipse cx="${rx}" cy="${cy}" rx="${r}" ry="${r + 0.8}" fill="#4a3a30"/>
-      <circle cx="${lx + 1.4}" cy="${cy - 1.6}" r="${r * 0.36}" fill="#ffffff"/>
-      <circle cx="${rx + 1.4}" cy="${cy - 1.6}" r="${r * 0.36}" fill="#ffffff"/>`;
-    if (mood === "happy") {
-      e = `
-      <path d="M${lx - r} ${cy} q${r} -${r * 1.15} ${r * 2} 0" stroke="#4a3a30" stroke-width="2.6" fill="none" stroke-linecap="round"/>
-      <path d="M${rx - r} ${cy} q${r} -${r * 1.15} ${r * 2} 0" stroke="#4a3a30" stroke-width="2.6" fill="none" stroke-linecap="round"/>`;
-    } else if (mood === "angry") {
-      e = `
-      <path d="M${lx - r - 2} ${cy - 5} l${r * 2 + 4} 4" stroke="#4a3a30" stroke-width="2.4" stroke-linecap="round"/>
-      <path d="M${rx + r + 2} ${cy - 5} l-${r * 2 + 4} 4" stroke="#4a3a30" stroke-width="2.4" stroke-linecap="round"/>
-      <ellipse cx="${lx}" cy="${cy + 2}" rx="${r * 0.9}" ry="${r}" fill="#4a3a30"/>
-      <ellipse cx="${rx}" cy="${cy + 2}" rx="${r * 0.9}" ry="${r}" fill="#4a3a30"/>`;
+    const h = hot || EYE_HOT;
+    if (mood === "angry") {
+      return `
+      <path d="M${lx - r - 3} ${cy - 6} l${r * 2 + 6} 4.4" stroke="${h}" stroke-width="2" stroke-linecap="round" opacity="0.85"/>
+      <path d="M${rx + r + 3} ${cy - 6} l-${r * 2 + 6} 4.4" stroke="${h}" stroke-width="2" stroke-linecap="round" opacity="0.85"/>
+      <ellipse cx="${lx}" cy="${cy + 1}" rx="${r}" ry="${r * 0.92}" fill="${INK}"/>
+      <ellipse cx="${rx}" cy="${cy + 1}" rx="${r}" ry="${r * 0.92}" fill="${INK}"/>
+      <ellipse cx="${lx}" cy="${cy + 1}" rx="${r * 0.62}" ry="${r * 0.52}" fill="${h}"/>
+      <ellipse cx="${rx}" cy="${cy + 1}" rx="${r * 0.62}" ry="${r * 0.52}" fill="${h}"/>`;
     }
-    return e;
-  }
-
-  function blush(cx, cy, gap, w) {
-    const ww = w || 7;
     return `
-      <ellipse cx="${cx - gap}" cy="${cy}" rx="${ww}" ry="${ww * 0.55}" fill="#ff9fb0" opacity="0.55"/>
-      <ellipse cx="${cx + gap}" cy="${cy}" rx="${ww}" ry="${ww * 0.55}" fill="#ff9fb0" opacity="0.55"/>`;
+      <ellipse cx="${lx}" cy="${cy}" rx="${r}" ry="${r * 1.05}" fill="${INK}"/>
+      <ellipse cx="${rx}" cy="${cy}" rx="${r}" ry="${r * 1.05}" fill="${INK}"/>
+      <ellipse cx="${lx}" cy="${cy}" rx="${r * 0.6}" ry="${r * 0.72}" fill="${h}"/>
+      <ellipse cx="${rx}" cy="${cy}" rx="${r * 0.6}" ry="${r * 0.72}" fill="${h}"/>
+      <circle cx="${lx + 1.2}" cy="${cy - 1.4}" r="${r * 0.24}" fill="#fff" opacity="0.85"/>
+      <circle cx="${rx + 1.2}" cy="${cy - 1.4}" r="${r * 0.24}" fill="#fff" opacity="0.85"/>`;
   }
 
-  function mouth(cx, cy, w) {
-    return `<path d="M${cx - w} ${cy} q${w} ${w * 0.85} ${w * 2} 0" stroke="#4a3a30" stroke-width="2.2" fill="none" stroke-linecap="round"/>`;
+  /* 톱니 같은 이빨 (저주받은 입) */
+  function fangs(cx, cy, w, color) {
+    const t = w || 5;
+    return `
+      <path d="M${cx - t} ${cy} q${t} ${t * 0.9} ${t * 2} 0" stroke="${color || "#c9b6c8"}" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <path d="M${cx - t + 1} ${cy + 0.5} l1.6 3.2 l1.6 -3.2 Z" fill="${color || "#e6dbe4"}"/>
+      <path d="M${cx + t - 4.2} ${cy + 0.5} l1.6 3.2 l1.6 -3.2 Z" fill="${color || "#e6dbe4"}"/>`;
+  }
+
+  /* 갈라진 흉터 */
+  function scar(cx, cy, c) {
+    return `<path d="M${cx - 8} ${cy - 6} l5 5 l-3 4 l6 5" stroke="${c}" stroke-width="1.6" fill="none" opacity="0.75" stroke-linecap="round"/>`;
   }
 
   /* ---------- 몸통 ---------- */
-  function bodyBlob(c1, c2) {
-    return `
-      <ellipse cx="60" cy="110" rx="34" ry="6" fill="rgba(120,90,70,0.12)"/>
-      <path d="M60 22 C88 22 104 44 104 70 C104 96 86 108 60 108 C34 108 16 96 16 70 C16 44 32 22 60 22 Z"
-        fill="${c1}" stroke="${c2}" stroke-width="3"/>
-      <ellipse cx="44" cy="44" rx="11" ry="7" fill="#ffffff" opacity="0.45" transform="rotate(-22 44 44)"/>`;
-  }
-
-  function bodyFluffy(c1, c2) {
-    const puffs = [
-      [60, 34, 20], [34, 50, 16], [86, 50, 16], [26, 76, 15],
-      [94, 76, 15], [40, 94, 15], [80, 94, 15], [60, 84, 22]
-    ];
-    return `
-      <ellipse cx="60" cy="110" rx="36" ry="6" fill="rgba(120,90,70,0.12)"/>
-      ${puffs.map((p) => `<circle cx="${p[0]}" cy="${p[1]}" r="${p[2]}" fill="${c1}" stroke="${c2}" stroke-width="2.4"/>`).join("")}
-      <ellipse cx="60" cy="76" rx="27" ry="24" fill="${c1}"/>`;
-  }
-
-  function bodyStar(c1, c2) {
-    return `
-      <ellipse cx="60" cy="110" rx="30" ry="6" fill="rgba(120,90,70,0.12)"/>
-      <path d="M60 20 L73 50 L104 54 L81 76 L88 106 L60 90 L32 106 L39 76 L16 54 L47 50 Z"
-        fill="${c1}" stroke="${c2}" stroke-width="3" stroke-linejoin="round"/>`;
-  }
-
-  function bodyGhost(c1, c2) {
-    return `
-      <ellipse cx="60" cy="112" rx="32" ry="6" fill="rgba(120,90,70,0.12)"/>
-      <path d="M60 20 C86 20 102 40 102 66 L102 96 Q94 88 86 96 Q78 104 70 96 Q62 88 54 96 Q46 104 38 96 Q30 88 22 96 L22 66 C22 40 34 20 60 20 Z"
-        fill="${c1}" stroke="${c2}" stroke-width="3" opacity="0.94"/>`;
-  }
-
-  function bodyGolem(c1, c2) {
-    return `
-      <ellipse cx="60" cy="110" rx="33" ry="6" fill="rgba(120,90,70,0.12)"/>
-      <rect x="20" y="36" width="80" height="70" rx="24" fill="${c1}" stroke="${c2}" stroke-width="3"/>
-      <rect x="30" y="24" width="26" height="18" rx="8" fill="${c1}" stroke="${c2}" stroke-width="3"/>
-      <rect x="64" y="24" width="26" height="18" rx="8" fill="${c1}" stroke="${c2}" stroke-width="3"/>
-      <rect x="30" y="48" width="16" height="10" rx="5" fill="#ffffff" opacity="0.32"/>`;
-  }
-
-  function bodyWhale(c1, c2) {
-    return `
-      <ellipse cx="60" cy="112" rx="32" ry="6" fill="rgba(120,90,70,0.12)"/>
-      <path d="M22 70 C22 42 40 28 62 28 C88 28 102 46 102 68 C102 94 82 106 58 106 C36 106 22 94 22 70 Z"
-        fill="${c1}" stroke="${c2}" stroke-width="3"/>
-      <path d="M96 44 q20 -10 18 12 q-10 -6 -18 -2 Z" fill="${c2}"/>
-      <circle cx="42" cy="46" r="4" fill="#ffffff" opacity="0.5"/>`;
-  }
-
-  function bodyKnight(c1, c2) {
-    return `
-      <ellipse cx="60" cy="110" rx="32" ry="6" fill="rgba(120,90,70,0.12)"/>
-      <path d="M60 24 C84 24 98 42 98 64 L98 96 C98 104 84 108 60 108 C36 108 22 104 22 96 L22 64 C22 42 36 24 60 24 Z"
-        fill="${c1}" stroke="${c2}" stroke-width="3"/>
-      <path d="M28 52 q32 -16 64 0 l0 16 q-32 -14 -64 0 Z" fill="#5a4a5f" opacity="0.28"/>`;
-  }
+  const BODY_FN = {
+    blob(c1, c2) {
+      return `
+        <ellipse cx="60" cy="112" rx="34" ry="6" fill="rgba(0,0,0,0.55)"/>
+        <path d="M60 20 C89 20 106 44 106 71 C106 98 87 110 60 110 C33 110 14 98 14 71 C14 44 31 20 60 20 Z"
+          fill="${c1}" stroke="${c2}" stroke-width="3"/>
+        <path d="M60 30 C80 30 94 48 94 70 C94 92 80 101 60 101 C40 101 26 92 26 70 C26 48 40 30 60 30 Z"
+          fill="none" stroke="${c2}" stroke-width="1.2" opacity="0.35"/>
+        <ellipse cx="44" cy="42" rx="12" ry="7" fill="#ffffff" opacity="0.1" transform="rotate(-24 44 42)"/>
+        <path d="M30 96 q8 -10 16 0 q8 10 16 0 q8 -10 16 0" stroke="${c2}" stroke-width="1.4" fill="none" opacity="0.5"/>`;
+    },
+    fluffy(c1, c2) {
+      const puffs = [
+        [60, 32, 20], [34, 50, 16], [86, 50, 16], [26, 78, 15],
+        [94, 78, 15], [40, 96, 15], [80, 96, 15], [60, 84, 22]
+      ];
+      return `
+        <ellipse cx="60" cy="112" rx="36" ry="6" fill="rgba(0,0,0,0.55)"/>
+        ${puffs.map((p) => `<circle cx="${p[0]}" cy="${p[1]}" r="${p[2]}" fill="${c1}" stroke="${c2}" stroke-width="2.2"/>`).join("")}
+        <ellipse cx="60" cy="76" rx="27" ry="24" fill="${c1}"/>`;
+    },
+    star(c1, c2) {
+      return `
+        <ellipse cx="60" cy="112" rx="30" ry="6" fill="rgba(0,0,0,0.55)"/>
+        <path d="M60 18 L73 49 L106 53 L82 76 L89 108 L60 91 L31 108 L38 76 L14 53 L47 49 Z"
+          fill="${c1}" stroke="${c2}" stroke-width="3" stroke-linejoin="round"/>
+        <path d="M60 34 L68 54 L90 57 L74 72 L78 93 L60 82 L42 93 L46 72 L30 57 L52 54 Z"
+          fill="none" stroke="${c2}" stroke-width="1.1" opacity="0.45"/>`;
+    },
+    ghost(c1, c2) {
+      return `
+        <ellipse cx="60" cy="114" rx="32" ry="6" fill="rgba(0,0,0,0.5)"/>
+        <path d="M60 18 C87 18 103 39 103 66 L103 98 Q94 89 86 98 Q78 107 70 98 Q62 89 54 98 Q46 107 38 98 Q30 89 21 98 L21 66 C21 39 33 18 60 18 Z"
+          fill="${c1}" stroke="${c2}" stroke-width="2.6" opacity="0.92"/>
+        <path d="M44 30 q16 -8 32 0" stroke="${c2}" stroke-width="1.4" fill="none" opacity="0.4"/>`;
+    },
+    golem(c1, c2) {
+      return `
+        <ellipse cx="60" cy="112" rx="33" ry="6" fill="rgba(0,0,0,0.55)"/>
+        <rect x="19" y="35" width="82" height="71" rx="20" fill="${c1}" stroke="${c2}" stroke-width="3"/>
+        <rect x="29" y="22" width="26" height="18" rx="7" fill="${c1}" stroke="${c2}" stroke-width="2.6"/>
+        <rect x="65" y="22" width="26" height="18" rx="7" fill="${c1}" stroke="${c2}" stroke-width="2.6"/>
+        <path d="M30 62 h12 l-4 10 h10 M78 52 l-6 12 h12" stroke="${c2}" stroke-width="2" fill="none" opacity="0.6" stroke-linecap="round"/>
+        <rect x="30" y="46" width="14" height="8" rx="4" fill="#ffffff" opacity="0.1"/>`;
+    },
+    whale(c1, c2) {
+      return `
+        <ellipse cx="60" cy="112" rx="32" ry="6" fill="rgba(0,0,0,0.55)"/>
+        <path d="M21 70 C21 41 40 26 62 26 C89 26 103 46 103 68 C103 95 82 108 58 108 C35 108 21 95 21 70 Z"
+          fill="${c1}" stroke="${c2}" stroke-width="3"/>
+        <path d="M97 42 q21 -11 19 13 q-11 -7 -19 -3 Z" fill="${c2}" opacity="0.8"/>
+        <path d="M28 76 q34 14 68 0" stroke="${c2}" stroke-width="1.6" fill="none" opacity="0.5"/>
+        <circle cx="42" cy="44" r="4.4" fill="${c2}" opacity="0.9"/>`;
+    },
+    knight(c1, c2) {
+      return `
+        <ellipse cx="60" cy="112" rx="32" ry="6" fill="rgba(0,0,0,0.55)"/>
+        <path d="M60 22 C85 22 99 42 99 65 L99 97 C99 105 84 110 60 110 C36 110 21 105 21 97 L21 65 C21 42 35 22 60 22 Z"
+          fill="${c1}" stroke="${c2}" stroke-width="3"/>
+        <path d="M26 50 q34 -14 68 0 l0 14 q-34 -13 -68 0 Z" fill="${c2}" opacity="0.16"/>
+        <path d="M60 30 V104" stroke="${c2}" stroke-width="1.4" opacity="0.35"/>
+        <path d="M34 88 q26 10 52 0" stroke="${c2}" stroke-width="1.4" fill="none" opacity="0.4"/>`;
+    }
+  };
 
   /* ---------- 액세서리 ---------- */
   function crown(c1) {
     return `
-      <path d="M40 24 L46 10 L54 20 L60 6 L66 20 L74 10 L80 24 Z" fill="#ffe08a" stroke="#e6b23c" stroke-width="2.4" stroke-linejoin="round"/>
-      <circle cx="60" cy="15" r="2.6" fill="#ff8f7a"/>`;
+      <path d="M39 24 L46 8 L54 19 L60 4 L66 19 L74 8 L81 24 Z" fill="#c9a24a" stroke="#f0d792" stroke-width="2" stroke-linejoin="round"/>
+      <circle cx="60" cy="14" r="2.6" fill="#b8323e"/>
+      <path d="M39 24 h42" stroke="#f0d792" stroke-width="1.4"/>`;
   }
   function earsBunny(c1, c2) {
     return `
-      <path d="M42 28 q-8 -26 4 -26 q10 0 8 26 Z" fill="${c1}" stroke="${c2}" stroke-width="2.6"/>
-      <path d="M78 28 q8 -26 -4 -26 q-10 0 -8 26 Z" fill="${c1}" stroke="${c2}" stroke-width="2.6"/>
-      <path d="M44 26 q-4 -18 2 -18 q6 0 4 18 Z" fill="#ffd6e2"/>
-      <path d="M76 26 q4 -18 -2 -18 q-6 0 -4 18 Z" fill="#ffd6e2"/>`;
+      <path d="M42 28 q-9 -27 4 -27 q11 0 8 27 Z" fill="${c1}" stroke="${c2}" stroke-width="2.4"/>
+      <path d="M78 28 q9 -27 -4 -27 q-11 0 -8 27 Z" fill="${c1}" stroke="${c2}" stroke-width="2.4"/>
+      <path d="M44 25 q-4 -18 2 -18 q6 0 4 18 Z" fill="${c2}" opacity="0.5"/>
+      <path d="M76 25 q4 -18 -2 -18 q-6 0 -4 18 Z" fill="${c2}" opacity="0.5"/>`;
   }
   function earsCat(c1, c2) {
     return `
-      <path d="M34 34 L30 8 L54 24 Z" fill="${c1}" stroke="${c2}" stroke-width="2.6" stroke-linejoin="round"/>
-      <path d="M86 34 L90 8 L66 24 Z" fill="${c1}" stroke="${c2}" stroke-width="2.6" stroke-linejoin="round"/>
-      <path d="M38 30 L36 16 L48 25 Z" fill="#ffd6e2"/>
-      <path d="M82 30 L84 16 L72 25 Z" fill="#ffd6e2"/>`;
+      <path d="M33 35 L28 6 L55 24 Z" fill="${c1}" stroke="${c2}" stroke-width="2.4" stroke-linejoin="round"/>
+      <path d="M87 35 L92 6 L65 24 Z" fill="${c1}" stroke="${c2}" stroke-width="2.4" stroke-linejoin="round"/>
+      <path d="M39 30 L37 15 L49 25 Z" fill="${c2}" opacity="0.45"/>
+      <path d="M81 30 L83 15 L71 25 Z" fill="${c2}" opacity="0.45"/>`;
   }
   function earsFox(c1, c2) {
     return `
-      <path d="M32 36 L24 6 L56 22 Z" fill="${c1}" stroke="${c2}" stroke-width="2.6" stroke-linejoin="round"/>
-      <path d="M88 36 L96 6 L64 22 Z" fill="${c1}" stroke="${c2}" stroke-width="2.6" stroke-linejoin="round"/>
-      <path d="M36 31 L31 15 L49 24 Z" fill="#ffd6e2"/>
-      <path d="M84 31 L89 15 L71 24 Z" fill="#ffd6e2"/>`;
+      <path d="M31 37 L22 4 L56 22 Z" fill="${c1}" stroke="${c2}" stroke-width="2.4" stroke-linejoin="round"/>
+      <path d="M89 37 L98 4 L64 22 Z" fill="${c1}" stroke="${c2}" stroke-width="2.4" stroke-linejoin="round"/>
+      <path d="M36 31 L30 14 L49 24 Z" fill="${c2}" opacity="0.45"/>
+      <path d="M84 31 L90 14 L71 24 Z" fill="${c2}" opacity="0.45"/>`;
   }
   function mushroomCap(c1, c2) {
     return `
-      <path d="M18 48 q42 -42 84 0 q-42 16 -84 0 Z" fill="${c1}" stroke="${c2}" stroke-width="3"/>
-      <circle cx="44" cy="36" r="5" fill="#ffffff" opacity="0.75"/>
-      <circle cx="70" cy="30" r="4" fill="#ffffff" opacity="0.75"/>
-      <circle cx="60" cy="44" r="3.4" fill="#ffffff" opacity="0.6"/>`;
+      <path d="M16 48 q44 -44 88 0 q-44 17 -88 0 Z" fill="${c1}" stroke="${c2}" stroke-width="2.8"/>
+      <circle cx="43" cy="35" r="5" fill="${c2}" opacity="0.5"/>
+      <circle cx="70" cy="29" r="4" fill="${c2}" opacity="0.45"/>
+      <circle cx="60" cy="44" r="3.4" fill="${c2}" opacity="0.4"/>
+      <path d="M60 46 q-4 16 0 26" stroke="${c2}" stroke-width="1.4" fill="none" opacity="0.35"/>`;
   }
   function acornCap(c1, c2) {
     return `
-      <path d="M22 44 q38 -34 76 0 q-38 14 -76 0 Z" fill="${c2}" stroke="#a07b52" stroke-width="2.6"/>
-      <rect x="57" y="10" width="6" height="16" rx="3" fill="#a07b52"/>
-      <path d="M38 40 q22 -10 44 0" stroke="#a07b52" stroke-width="2" fill="none"/>`;
+      <path d="M21 44 q39 -35 78 0 q-39 15 -78 0 Z" fill="${c2}" opacity="0.5" stroke="${c2}" stroke-width="2.2"/>
+      <rect x="57" y="8" width="6" height="18" rx="3" fill="${c2}" opacity="0.7"/>
+      <path d="M37 40 q23 -11 46 0" stroke="${c2}" stroke-width="1.6" fill="none" opacity="0.6"/>`;
   }
   function beeWings(c1) {
     return `
-      <ellipse cx="26" cy="46" rx="16" ry="22" fill="#ffffff" opacity="0.62" transform="rotate(-24 26 46)"/>
-      <ellipse cx="94" cy="46" rx="16" ry="22" fill="#ffffff" opacity="0.62" transform="rotate(24 94 46)"/>
-      <path d="M30 40 q6 -14 14 -18" stroke="#ffffff" stroke-width="0" fill="none"/>
-      <path d="M42 26 q-6 -12 2 -14 q6 8 4 14 Z" fill="${c1}"/>
-      <path d="M78 26 q6 -12 -2 -14 q-6 8 -4 14 Z" fill="${c1}"/>`;
+      <ellipse cx="24" cy="46" rx="15" ry="21" fill="${c1}" opacity="0.35" stroke="${c1}" stroke-width="1.4" transform="rotate(-24 24 46)"/>
+      <ellipse cx="96" cy="46" rx="15" ry="21" fill="${c1}" opacity="0.35" stroke="${c1}" stroke-width="1.4" transform="rotate(24 96 46)"/>
+      <path d="M30 84 q20 8 40 0" stroke="${c1}" stroke-width="2.4" fill="none" opacity="0.35"/>
+      <path d="M34 94 q16 6 32 0" stroke="${c1}" stroke-width="2.4" fill="none" opacity="0.28"/>`;
   }
   function cloudPuffs(c1, c2) {
     return `
-      <circle cx="34" cy="56" r="20" fill="${c1}" stroke="${c2}" stroke-width="2.4"/>
-      <circle cx="86" cy="56" r="20" fill="${c1}" stroke="${c2}" stroke-width="2.4"/>
-      <circle cx="60" cy="40" r="24" fill="${c1}" stroke="${c2}" stroke-width="2.4"/>`;
+      <circle cx="33" cy="55" r="20" fill="${c1}" stroke="${c2}" stroke-width="2.2"/>
+      <circle cx="87" cy="55" r="20" fill="${c1}" stroke="${c2}" stroke-width="2.2"/>
+      <circle cx="60" cy="38" r="24" fill="${c1}" stroke="${c2}" stroke-width="2.2"/>`;
   }
   function shell(c1, c2) {
     return `
-      <path d="M20 74 q0 -36 40 -36 q40 0 40 36 q-40 22 -80 0 Z" fill="${c2}" stroke="${c1}" stroke-width="3"/>
-      <path d="M46 46 q-2 20 -8 34 M74 46 q2 20 8 34 M60 40 v42" stroke="${c1}" stroke-width="2.2" fill="none"/>`;
+      <path d="M20 74 q0 -37 40 -37 q40 0 40 37 q-40 22 -80 0 Z" fill="${c2}" opacity="0.35" stroke="${c2}" stroke-width="2.6"/>
+      <path d="M46 44 q-2 20 -8 35 M74 44 q2 20 8 35 M60 38 v44" stroke="${c2}" stroke-width="1.8" fill="none" opacity="0.75"/>`;
   }
   function batWings(c1) {
     return `
-      <path d="M22 54 q-18 -18 -8 -30 q10 8 18 4 q-2 16 -2 26 Z" fill="${c1}" opacity="0.8"/>
-      <path d="M98 54 q18 -18 8 -30 q-10 8 -18 4 q2 16 2 26 Z" fill="${c1}" opacity="0.8"/>
-      <path d="M52 76 l3 8 l4 -8 Z" fill="#ffffff"/>
-      <path d="M61 76 l3 8 l4 -8 Z" fill="#ffffff"/>`;
+      <path d="M22 54 q-19 -19 -8 -32 q11 9 19 4 q-2 17 -2 28 Z" fill="${c1}" opacity="0.85" stroke="${c1}" stroke-width="1.4"/>
+      <path d="M98 54 q19 -19 8 -32 q-11 9 -19 4 q2 17 2 28 Z" fill="${c1}" opacity="0.85" stroke="${c1}" stroke-width="1.4"/>
+      <path d="M50 74 l3.4 9 l3.6 -9 Z" fill="#e6dbe4"/>
+      <path d="M62 74 l3.4 9 l3.6 -9 Z" fill="#e6dbe4"/>`;
   }
   function butterflyWings(c1, c2) {
     return `
-      <path d="M56 58 q-38 -26 -44 4 q-4 24 22 22 q18 -2 22 -26 Z" fill="${c1}" opacity="0.86" stroke="${c2}" stroke-width="2"/>
-      <path d="M64 58 q38 -26 44 4 q4 24 -22 22 q-18 -2 -22 -26 Z" fill="${c1}" opacity="0.86" stroke="${c2}" stroke-width="2"/>
-      <circle cx="34" cy="68" r="5" fill="#ffffff" opacity="0.7"/>
-      <circle cx="86" cy="68" r="5" fill="#ffffff" opacity="0.7"/>
-      <path d="M56 40 q-6 -12 2 -16 M64 40 q6 -12 -2 -16" stroke="${c2}" stroke-width="2" fill="none" stroke-linecap="round"/>`;
+      <path d="M56 58 q-38 -27 -45 4 q-4 25 23 23 q18 -2 22 -27 Z" fill="${c1}" opacity="0.7" stroke="${c2}" stroke-width="1.8"/>
+      <path d="M64 58 q38 -27 45 4 q4 25 -23 23 q-18 -2 -22 -27 Z" fill="${c1}" opacity="0.7" stroke="${c2}" stroke-width="1.8"/>
+      <circle cx="33" cy="68" r="4.6" fill="none" stroke="${c2}" stroke-width="1.4" opacity="0.7"/>
+      <circle cx="87" cy="68" r="4.6" fill="none" stroke="${c2}" stroke-width="1.4" opacity="0.7"/>`;
   }
   function plantLeaves(c1, c2) {
     return `
-      <path d="M60 22 q-2 -18 10 -20 q6 12 -2 22 Z" fill="${c1}" stroke="${c2}" stroke-width="2"/>
-      <path d="M56 24 q-14 -12 -22 -2 q8 12 22 6 Z" fill="${c1}" stroke="${c2}" stroke-width="2"/>
-      <path d="M64 24 q14 -12 22 -2 q-8 12 -22 6 Z" fill="${c1}" stroke="${c2}" stroke-width="2"/>`;
+      <path d="M60 20 q-3 -19 11 -21 q7 13 -3 23 Z" fill="${c1}" stroke="${c2}" stroke-width="1.8"/>
+      <path d="M55 23 q-15 -13 -24 -2 q9 13 24 6 Z" fill="${c1}" stroke="${c2}" stroke-width="1.8"/>
+      <path d="M65 23 q15 -13 24 -2 q-9 13 -24 6 Z" fill="${c1}" stroke="${c2}" stroke-width="1.8"/>
+      <path d="M22 96 q10 -14 18 0 M80 96 q10 -14 18 0" stroke="${c2}" stroke-width="1.6" fill="none" opacity="0.5"/>`;
   }
   function queenVeil(c1, c2) {
     return `
-      <path d="M30 44 q30 -34 60 0 q-6 46 -30 52 q-24 -6 -30 -52 Z" fill="#ffffff" opacity="0.28"/>
+      <path d="M28 42 q32 -36 64 0 q-6 48 -32 55 q-26 -7 -32 -55 Z" fill="${c2}" opacity="0.12" stroke="${c2}" stroke-width="1.2"/>
       ${crown(c1)}
-      <circle cx="28" cy="60" r="3" fill="#ffffff" opacity="0.9"/>
-      <circle cx="92" cy="60" r="3" fill="#ffffff" opacity="0.9"/>`;
+      <circle cx="26" cy="60" r="2.6" fill="${c2}" opacity="0.9"/>
+      <circle cx="94" cy="60" r="2.6" fill="${c2}" opacity="0.9"/>`;
   }
   function cookieChips(c1) {
     return `
-      <circle cx="40" cy="46" r="4" fill="#7a5236"/>
-      <circle cx="72" cy="40" r="3.4" fill="#7a5236"/>
-      <circle cx="80" cy="66" r="4" fill="#7a5236"/>
-      <circle cx="48" cy="88" r="3.6" fill="#7a5236"/>
-      <circle cx="66" cy="94" r="3" fill="#7a5236"/>`;
+      <circle cx="40" cy="46" r="4" fill="#0b0810" opacity="0.8"/>
+      <circle cx="72" cy="40" r="3.4" fill="#0b0810" opacity="0.8"/>
+      <circle cx="80" cy="66" r="4" fill="#0b0810" opacity="0.8"/>
+      <circle cx="48" cy="88" r="3.6" fill="#0b0810" opacity="0.8"/>
+      <path d="M36 70 l8 6 M66 78 l-6 8" stroke="${c1}" stroke-width="1.4" opacity="0.7"/>`;
   }
   function dragonHorns(c1, c2) {
     return `
-      <path d="M40 26 q-10 -16 -2 -20 q8 4 8 16 Z" fill="${c2}" stroke="#e0789a" stroke-width="2" stroke-linejoin="round"/>
-      <path d="M80 26 q10 -16 2 -20 q-8 4 -8 16 Z" fill="${c2}" stroke="#e0789a" stroke-width="2" stroke-linejoin="round"/>
-      <path d="M18 66 q-16 -8 -12 -22 q14 6 16 18 Z" fill="${c1}" opacity="0.7"/>
-      <path d="M102 66 q16 -8 12 -22 q-14 6 -16 18 Z" fill="${c1}" opacity="0.7"/>`;
+      <path d="M40 25 q-11 -17 -2 -22 q9 5 9 17 Z" fill="${c2}" stroke="${c2}" stroke-width="1.6" stroke-linejoin="round"/>
+      <path d="M80 25 q11 -17 2 -22 q-9 5 -9 17 Z" fill="${c2}" stroke="${c2}" stroke-width="1.6" stroke-linejoin="round"/>
+      <path d="M17 66 q-17 -9 -13 -24 q15 7 17 19 Z" fill="${c1}" opacity="0.7"/>
+      <path d="M103 66 q17 -9 13 -24 q-15 7 -17 19 Z" fill="${c1}" opacity="0.7"/>`;
   }
   function fairyBits(c1) {
     return `
-      <ellipse cx="24" cy="52" rx="14" ry="20" fill="#ffffff" opacity="0.55" transform="rotate(-20 24 52)"/>
-      <ellipse cx="96" cy="52" rx="14" ry="20" fill="#ffffff" opacity="0.55" transform="rotate(20 96 52)"/>
-      <ellipse cx="60" cy="14" rx="12" ry="4" fill="#ffe08a" opacity="0.9"/>
-      <path d="M96 30 l3 8 l8 3 l-8 3 l-3 8 l-3 -8 l-8 -3 l8 -3 Z" fill="#fff6c8"/>`;
+      <ellipse cx="23" cy="52" rx="13" ry="19" fill="${c1}" opacity="0.32" stroke="${c1}" stroke-width="1.2" transform="rotate(-20 23 52)"/>
+      <ellipse cx="97" cy="52" rx="13" ry="19" fill="${c1}" opacity="0.32" stroke="${c1}" stroke-width="1.2" transform="rotate(20 97 52)"/>
+      <path d="M96 28 l3 8 l8 3 l-8 3 l-3 8 l-3 -8 l-8 -3 l8 -3 Z" fill="${c1}" opacity="0.85"/>`;
   }
   function birdWings(c1) {
     return `
-      <path d="M28 60 q-24 -6 -20 -28 q18 4 26 20 Z" fill="${c1}" stroke="#e8a86a" stroke-width="2"/>
-      <path d="M92 60 q24 -6 20 -28 q-18 4 -26 20 Z" fill="${c1}" stroke="#e8a86a" stroke-width="2"/>
-      <path d="M54 26 q6 -18 14 -2" stroke="#e8a86a" stroke-width="3" fill="none" stroke-linecap="round"/>
-      <path d="M54 74 l-10 6 l10 4 Z" fill="#ffb347"/>`;
+      <path d="M28 60 q-25 -7 -21 -29 q19 4 27 21 Z" fill="${c1}" opacity="0.75" stroke="${c1}" stroke-width="1.4"/>
+      <path d="M92 60 q25 -7 21 -29 q-19 4 -27 21 Z" fill="${c1}" opacity="0.75" stroke="${c1}" stroke-width="1.4"/>
+      <path d="M54 74 l-10 7 l10 4 Z" fill="${c1}" opacity="0.9"/>`;
   }
   function demonHorns(c1) {
     return `
-      <path d="M38 26 q-6 -20 4 -22 q8 6 6 18 Z" fill="#8b6aa8" stroke="#6e4f8a" stroke-width="2"/>
-      <path d="M82 26 q6 -20 -4 -22 q-8 6 -6 18 Z" fill="#8b6aa8" stroke="#6e4f8a" stroke-width="2"/>
-      <path d="M20 58 q-16 -12 -10 -26 q14 8 14 22 Z" fill="${c1}" opacity="0.6"/>
-      <path d="M100 58 q16 -12 10 -26 q-14 8 -14 22 Z" fill="${c1}" opacity="0.6"/>`;
+      <path d="M37 26 q-7 -21 4 -24 q9 7 7 19 Z" fill="#2a1730" stroke="${c1}" stroke-width="1.6"/>
+      <path d="M83 26 q7 -21 -4 -24 q-9 7 -7 19 Z" fill="#2a1730" stroke="${c1}" stroke-width="1.6"/>
+      <path d="M18 58 q-17 -13 -11 -28 q15 9 15 24 Z" fill="${c1}" opacity="0.5"/>
+      <path d="M102 58 q17 -13 11 -28 q-15 9 -15 24 Z" fill="${c1}" opacity="0.5"/>`;
   }
 
   /* ---------- 조립 ---------- */
   const ACC = {
     blob: () => "",
     crowned: (m) => crown(m.color),
-    bunny: (m) => earsBunny(m.color, "#e8b8c8"),
+    bunny: (m) => earsBunny(m.color, m.color2),
     acorn: (m) => acornCap(m.color, m.color2),
-    mushroom: (m) => mushroomCap(m.color, "#e8927c"),
+    mushroom: (m) => mushroomCap(m.color, m.color2),
     fluffy: () => "",
-    bee: (m) => beeWings(m.color),
+    bee: (m) => beeWings(m.color2),
     cloud: () => "",
     star: () => "",
-    whale: (m) => `<path d="M70 26 q-6 -14 4 -16 q4 10 -4 16 Z" fill="${m.color2}"/>`,
-    bat: (m) => batWings(m.color),
+    whale: () => "",
+    bat: (m) => batWings(m.color2),
     turtle: () => "",
-    butterfly: (m) => butterflyWings(m.color, "#b49ce0"),
-    plant: (m) => plantLeaves(m.color, "#5fae74"),
-    queen: (m) => queenVeil(m.color, "#b49ce0"),
-    cat: (m) => earsCat(m.color, "#a08fbf"),
-    fox: (m) => earsFox(m.color, "#e8b86a"),
+    butterfly: (m) => butterflyWings(m.color, m.color2),
+    plant: (m) => plantLeaves(m.color, m.color2),
+    queen: (m) => queenVeil(m.color, m.color2),
+    cat: (m) => earsCat(m.color, m.color2),
+    fox: (m) => earsFox(m.color, m.color2),
     cookie: (m) => cookieChips(m.color),
     dragon: (m) => dragonHorns(m.color, m.color2),
-    fairy: (m) => fairyBits(m.color),
-    bird: (m) => birdWings(m.color),
+    fairy: (m) => fairyBits(m.color2),
+    bird: (m) => birdWings(m.color2),
     ghost: () => "",
     knight: () => "",
-    demon: (m) => demonHorns(m.color)
-  };
-
-  const BODY = {
-    fluffy: bodyFluffy,
-    star: bodyStar,
-    ghost: bodyGhost,
-    golem: bodyGolem,
-    whale: bodyWhale,
-    knight: bodyKnight
+    demon: (m) => demonHorns(m.color2)
   };
 
   function bodyFor(kind, m) {
-    const fn = BODY[kind];
+    const fn = BODY_FN[kind];
     if (fn) return fn(m.color, m.color2);
-    if (kind === "cloud") return bodyBlob(m.color, m.color2) + cloudPuffs(m.color, m.color2);
-    if (kind === "turtle") return bodyBlob(m.color, m.color2) + shell(m.color, m.color2);
-    if (kind === "bee") return bodyBlob(m.color, m.color2) + `<path d="M40 82 q20 8 40 0" stroke="#c99a3c" stroke-width="3" fill="none" opacity="0.5"/><path d="M44 94 q16 6 32 0" stroke="#c99a3c" stroke-width="3" fill="none" opacity="0.4"/>`;
-    return bodyBlob(m.color, m.color2);
+    if (kind === "cloud") return BODY_FN.blob(m.color, m.color2) + cloudPuffs(m.color, m.color2);
+    if (kind === "turtle") return BODY_FN.blob(m.color, m.color2) + shell(m.color, m.color2);
+    return BODY_FN.blob(m.color, m.color2);
   }
 
   SP.monster = function (mon, opts) {
@@ -277,99 +279,140 @@
     const boss = !!opts.boss || !!mon.boss;
     const mood = boss ? "angry" : "smile";
     const acc = (ACC[mon.kind] || ACC.blob)(mon);
-    const decorate = acc;
     const eyeY = mon.kind === "mushroom" ? 72 : 66;
+    const glow = boss ? 12 : 6;
     return `
     <svg viewBox="0 0 120 120" class="sprite-svg ${boss ? "sprite-boss" : ""}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      ${boss ? `<circle cx="60" cy="66" r="52" fill="${mon.color}" opacity="0.18"/>` : ""}
-      <g class="sprite-body">
+      ${boss ? `<circle cx="60" cy="66" r="54" fill="${mon.color2}" opacity="0.07"/>` : ""}
+      <g class="sprite-body" style="filter: drop-shadow(0 0 ${glow}px ${mon.color2}aa) drop-shadow(0 8px 10px rgba(0,0,0,0.6))">
         ${bodyFor(mon.kind, mon)}
-        ${decorate}
-        ${eyes(60, eyeY, 13, 4.8, mood)}
-        ${blush(60, eyeY + 12, 20, 6.5)}
-        ${mouth(60, eyeY + 13, 4)}
+        ${acc}
+        ${eyes(60, eyeY, 13, boss ? 5.2 : 4.6, mood, mon.color2)}
+        ${scar(46, eyeY + 16, mon.color2)}
+        ${fangs(60, eyeY + 15, 4.6)}
       </g>
     </svg>`;
   };
 
-  /* 용사 */
+  /* ---------- 서약자 (저주받은 기사) ---------- */
   SP.hero = function (tier, opts) {
     opts = opts || {};
-    const blade = tier ? tier.blade : "#9ccdf2";
-    const blade2 = tier ? tier.blade2 : "#e3f5ff";
-    const bolt = tier ? tier.bolt : "#5c9fd0";
+    const blade = tier ? tier.blade : "#8fc4e8";
+    const blade2 = tier ? tier.blade2 : "#dff2ff";
+    const bolt = tier ? tier.bolt : "#4d7fa8";
+    const glow = tier ? tier.glow : "rgba(120,190,240,0.6)";
     return `
     <svg viewBox="0 0 120 140" class="sprite-svg hero-svg" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <ellipse cx="58" cy="132" rx="30" ry="6" fill="rgba(120,90,70,0.15)"/>
-      <!-- 망토 -->
-      <path d="M36 84 q24 -8 48 0 l6 38 q-30 12 -60 0 Z" fill="#a8e0cc" stroke="#7ec9b0" stroke-width="2.5"/>
-      <!-- 몸 -->
-      <rect x="42" y="78" width="36" height="38" rx="14" fill="#fff6ea" stroke="#e8d5c0" stroke-width="2.5"/>
-      <rect x="42" y="98" width="36" height="8" rx="4" fill="#ffb3a7"/>
-      <!-- 다리 -->
-      <rect x="48" y="112" width="10" height="16" rx="5" fill="#c9a88c"/>
-      <rect x="62" y="112" width="10" height="16" rx="5" fill="#c9a88c"/>
-      <!-- 머리 -->
-      <circle cx="60" cy="52" r="30" fill="#ffe8d6" stroke="#f2d4bd" stroke-width="2"/>
-      <!-- 머리카락 -->
-      <path d="M30 50 q2 -30 30 -30 q28 0 30 30 q-16 -12 -30 -8 q-14 -4 -30 8 Z" fill="#8a6a52"/>
-      <path d="M38 44 q10 -10 22 -8" stroke="#a8836a" stroke-width="3" fill="none" stroke-linecap="round"/>
-      <!-- 눈 -->
-      <ellipse cx="48" cy="56" rx="4.4" ry="5.2" fill="#4a3a30"/>
-      <ellipse cx="72" cy="56" rx="4.4" ry="5.2" fill="#4a3a30"/>
-      <circle cx="49.6" cy="54" r="1.7" fill="#fff"/>
-      <circle cx="73.6" cy="54" r="1.7" fill="#fff"/>
-      <ellipse cx="38" cy="65" rx="6" ry="3.4" fill="#ff9fb0" opacity="0.55"/>
-      <ellipse cx="82" cy="65" rx="6" ry="3.4" fill="#ff9fb0" opacity="0.55"/>
-      <path d="M56 66 q4 4 8 0" stroke="#4a3a30" stroke-width="2" fill="none" stroke-linecap="round"/>
-      <!-- 성검 -->
-      <g transform="translate(86 46) rotate(24)" class="hero-blade">
-        <rect x="-4" y="-34" width="8" height="60" rx="3" fill="${blade}" stroke="${blade2}" stroke-width="2"/>
-        <path d="M0 -46 l5 12 h-10 Z" fill="${blade2}"/>
-        <rect x="-12" y="22" width="24" height="7" rx="3.5" fill="${bolt}"/>
-        <rect x="-3" y="29" width="6" height="16" rx="3" fill="#b98d68"/>
-        <circle cx="0" cy="47" r="4.4" fill="#ffe08a" stroke="#e6b23c" stroke-width="1.6"/>
+      <defs>
+        <linearGradient id="heroCapeGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#2a1020"/>
+          <stop offset="100%" stop-color="#0d0710"/>
+        </linearGradient>
+        <linearGradient id="heroBladeGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="${blade2}"/>
+          <stop offset="55%" stop-color="${blade}"/>
+          <stop offset="100%" stop-color="${bolt}"/>
+        </linearGradient>
+      </defs>
+      <ellipse cx="58" cy="133" rx="30" ry="6" fill="rgba(0,0,0,0.6)"/>
+      <g class="sprite-body" style="filter: drop-shadow(0 0 8px rgba(200,40,60,0.35))">
+        <!-- 낡은 망토 -->
+        <path d="M34 80 q26 -10 52 0 l8 42 q-16 8 -24 4 q-8 -6 -16 0 q-10 6 -22 -4 Z"
+          fill="url(#heroCapeGrad)" stroke="#5c1a2a" stroke-width="2"/>
+        <path d="M34 96 q26 8 52 0" stroke="#7a2436" stroke-width="1.4" fill="none" opacity="0.7"/>
+        <!-- 갑옷 몸통 -->
+        <path d="M43 78 q17 -6 34 0 l3 34 q-20 8 -40 0 Z" fill="#232030" stroke="#5d5570" stroke-width="2.4"/>
+        <path d="M48 92 q12 5 24 0" stroke="#8a7fa4" stroke-width="1.6" fill="none" opacity="0.8"/>
+        <path d="M60 80 v30" stroke="#8a7fa4" stroke-width="1.2" opacity="0.5"/>
+        <!-- 다리 -->
+        <rect x="48" y="110" width="9" height="18" rx="4" fill="#1b1926" stroke="#4a4459" stroke-width="1.6"/>
+        <rect x="63" y="110" width="9" height="18" rx="4" fill="#1b1926" stroke="#4a4459" stroke-width="1.6"/>
+        <!-- 어깨 견갑 -->
+        <path d="M40 80 q-8 -6 -2 -14 q10 2 12 10 Z" fill="#2a2636" stroke="#6b6180" stroke-width="1.8"/>
+        <path d="M80 80 q8 -6 2 -14 q-10 2 -12 10 Z" fill="#2a2636" stroke="#6b6180" stroke-width="1.8"/>
+        <!-- 두건 -->
+        <path d="M60 20 q-26 0 -30 26 q-2 16 4 24 q10 -14 26 -14 q16 0 26 14 q6 -8 4 -24 Q86 20 60 20 Z"
+          fill="#17141f" stroke="#4e465f" stroke-width="2.4"/>
+        <path d="M38 52 q22 -12 44 0 q-6 10 -22 10 q-16 0 -22 -10 Z" fill="#08060c"/>
+        <!-- 눈빛 -->
+        <ellipse cx="50" cy="56" rx="4.2" ry="2.6" fill="#ff3b4e" style="filter: drop-shadow(0 0 4px #ff3b4e)"/>
+        <ellipse cx="70" cy="56" rx="4.2" ry="2.6" fill="#ff3b4e" style="filter: drop-shadow(0 0 4px #ff3b4e)"/>
+        <!-- 목의 룬 -->
+        <path d="M56 72 h8 M60 68 v8" stroke="#c9a24a" stroke-width="1.6" opacity="0.9"/>
       </g>
-      <path d="M94 20 l2 6 l6 2 l-6 2 l-2 6 l-2 -6 l-6 -2 l6 -2 Z" fill="#fff3c4" opacity="0.95"/>
-      <path d="M20 78 l2 5 l5 2 l-5 2 l-2 5 l-2 -5 l-5 -2 l5 -2 Z" fill="#fff3c4" opacity="0.8"/>
+      <!-- 저주받은 검 -->
+      <g transform="translate(88 44) rotate(22)" class="hero-blade" style="filter: drop-shadow(0 0 10px ${blade})">
+        <rect x="-4.4" y="-36" width="8.8" height="62" rx="3" fill="url(#heroBladeGrad)" stroke="${blade2}" stroke-width="1.6"/>
+        <path d="M0 -50 l5.4 14 h-10.8 Z" fill="${blade2}"/>
+        <path d="M0 -30 v52" stroke="#ffffff" stroke-width="1.2" opacity="0.5"/>
+        <rect x="-13" y="20" width="26" height="7" rx="3.4" fill="${bolt}" stroke="${blade2}" stroke-width="1.2"/>
+        <rect x="-3" y="27" width="6" height="16" rx="3" fill="#3a2b22"/>
+        <circle cx="0" cy="46" r="4.6" fill="#1a1220" stroke="${blade2}" stroke-width="1.6"/>
+        <circle cx="0" cy="46" r="1.8" fill="#ff3b4e"/>
+      </g>
+      <path d="M96 18 l2 6 l6 2 l-6 2 l-2 6 l-2 -6 l-6 -2 l6 -2 Z" fill="${blade2}" opacity="0.8"/>
+      <path d="M18 76 l2 5 l5 2 l-5 2 l-2 5 l-2 -5 l-5 -2 l5 -2 Z" fill="#c9a24a" opacity="0.7"/>
+      <g opacity="0.55">
+        <path d="M20 44 q-6 -8 0 -14 q6 6 0 14" stroke="#7a2436" stroke-width="1.4" fill="none"/>
+      </g>
     </svg>`;
   };
 
-  /* 대장간 성검 */
+  /* ---------- 성검 (대장간) ---------- */
   SP.sword = function (lv) {
     const t = G.tierOf(lv);
     const sparkle = lv >= 12;
-    const broken = false;
     return `
     <svg viewBox="0 0 160 170" class="forge-sword" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <defs>
-        <radialGradient id="swordGlow" cx="50%" cy="45%" r="50%">
+        <radialGradient id="swordGlow" cx="50%" cy="45%" r="52%">
           <stop offset="0%" stop-color="${t.glow}"/>
-          <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+          <stop offset="100%" stop-color="rgba(0,0,0,0)"/>
         </radialGradient>
         <linearGradient id="bladeGrad" x1="0" y1="0" x2="1" y2="0">
           <stop offset="0%" stop-color="${t.blade2}"/>
-          <stop offset="45%" stop-color="${t.blade}"/>
+          <stop offset="42%" stop-color="${t.blade}"/>
           <stop offset="100%" stop-color="${t.bolt}"/>
         </linearGradient>
+        <linearGradient id="hiltGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#3a2b22"/>
+          <stop offset="100%" stop-color="#140d10"/>
+        </linearGradient>
       </defs>
+
+      <!-- 룬 원 -->
+      <g class="sword-runes" opacity="0.55">
+        <circle cx="80" cy="80" r="62" fill="none" stroke="${t.bolt}" stroke-width="1" stroke-dasharray="4 9"/>
+        <circle cx="80" cy="80" r="52" fill="none" stroke="${t.bolt}" stroke-width="0.8" stroke-dasharray="1 7"/>
+        <path d="M80 8 v10 M80 142 v-10 M8 80 h10 M142 80 h-10" stroke="${t.blade2}" stroke-width="1.2" opacity="0.7"/>
+      </g>
       <circle cx="80" cy="78" r="66" fill="url(#swordGlow)"/>
-      <g class="sword-group">
-        <path d="M80 16 L92 44 L92 106 L80 122 L68 106 L68 44 Z" fill="url(#bladeGrad)" stroke="${t.blade2}" stroke-width="3" stroke-linejoin="round"/>
-        <path d="M80 26 L80 108" stroke="#ffffff" stroke-width="2.4" opacity="0.55"/>
-        <path d="M72 46 L68 44 L68 106 L72 106 Z" fill="#ffffff" opacity="0.18"/>
-        <rect x="54" y="112" width="52" height="12" rx="6" fill="${t.bolt}" stroke="${t.blade2}" stroke-width="2"/>
-        <circle cx="80" cy="118" r="4" fill="#fff6c8"/>
-        <rect x="74" y="124" width="12" height="26" rx="5" fill="#c9a88c" stroke="#a8836a" stroke-width="2"/>
-        <path d="M74 132 h12 M74 140 h12" stroke="#a8836a" stroke-width="2"/>
-        <circle cx="80" cy="154" r="8" fill="${t.blade}" stroke="${t.blade2}" stroke-width="2.4"/>
-        <path d="M80 150 l1.4 3.4 l3.6 1.4 l-3.6 1.4 l-1.4 3.4 l-1.4 -3.4 l-3.6 -1.4 l3.6 -1.4 Z" fill="#fff6c8"/>
+
+      <g class="sword-group" style="filter: drop-shadow(0 0 10px ${t.blade})">
+        <!-- 날 -->
+        <path d="M80 12 L93 44 L93 104 L80 122 L67 104 L67 44 Z"
+          fill="url(#bladeGrad)" stroke="${t.blade2}" stroke-width="2.6" stroke-linejoin="round"/>
+        <path d="M80 22 L80 110" stroke="#ffffff" stroke-width="1.8" opacity="0.45"/>
+        <path d="M73 46 L67 44 L67 104 L73 104 Z" fill="#000000" opacity="0.3"/>
+        <!-- 혈흔 홈 -->
+        <path d="M80 40 V100" stroke="${t.bolt}" stroke-width="2" opacity="0.55"/>
+        <!-- 균열 -->
+        <path d="M72 58 l6 6 l-4 7 l7 6" stroke="#0b0810" stroke-width="1.2" fill="none" opacity="0.6"/>
+        <!-- 가드 -->
+        <path d="M52 112 q28 -8 56 0 q-4 10 -28 10 q-24 0 -28 -10 Z" fill="${t.bolt}" stroke="${t.blade2}" stroke-width="1.8"/>
+        <circle cx="80" cy="117" r="3.4" fill="#ff3b4e"/>
+        <!-- 손잡이 -->
+        <rect x="74" y="122" width="12" height="26" rx="5" fill="url(#hiltGrad)" stroke="#5d4a3a" stroke-width="1.6"/>
+        <path d="M74 130 h12 M74 137 h12 M74 144 h12" stroke="#8a6a4a" stroke-width="1.4" opacity="0.8"/>
+        <!-- 폼멜 -->
+        <circle cx="80" cy="154" r="9" fill="#1a1220" stroke="${t.blade2}" stroke-width="2"/>
+        <path d="M80 149 l1.6 3.8 l4 1.6 l-4 1.6 l-1.6 3.8 l-1.6 -3.8 l-4 -1.6 l4 -1.6 Z" fill="${t.blade2}"/>
       </g>
       ${sparkle ? `
       <g class="sword-sparkles">
-        <path d="M40 44 l2.4 6 l6 2.4 l-6 2.4 l-2.4 6 l-2.4 -6 l-6 -2.4 l6 -2.4 Z" fill="#fff6c8"/>
-        <path d="M122 60 l2 5 l5 2 l-5 2 l-2 5 l-2 -5 l-5 -2 l5 -2 Z" fill="#ffe08a"/>
-        <path d="M116 118 l1.6 4 l4 1.6 l-4 1.6 l-1.6 4 l-1.6 -4 l-4 -1.6 l4 -1.6 Z" fill="#ffffff"/>
+        <path d="M38 42 l2.4 6 l6 2.4 l-6 2.4 l-2.4 6 l-2.4 -6 l-6 -2.4 l6 -2.4 Z" fill="${t.blade2}"/>
+        <path d="M124 58 l2 5 l5 2 l-5 2 l-2 5 l-2 -5 l-5 -2 l5 -2 Z" fill="${t.blade}"/>
+        <path d="M118 120 l1.6 4 l4 1.6 l-4 1.6 l-1.6 4 l-1.6 -4 l-4 -1.6 l4 -1.6 Z" fill="#ffffff"/>
       </g>` : ""}
     </svg>`;
   };

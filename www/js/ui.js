@@ -16,6 +16,21 @@
   let repeatTimer = null;
 
   /* ===============================================================
+     전체 화면 보스 아레나 (집중 전투 모드)
+     =============================================================== */
+  function enterBattleFocus(boss) {
+    document.body.classList.add("battle-focus");
+    setTimeout(() => {
+      if (window.VFX) { VFX.resize(); VFX.setBoss(!!boss); VFX.start(); }
+    }, 30);
+  }
+
+  function exitBattleFocus() {
+    document.body.classList.remove("battle-focus");
+    if (window.VFX) { VFX.setBoss(false); VFX.stop(); }
+  }
+
+  /* ===============================================================
      사운드
      =============================================================== */
   let actx = null;
@@ -170,10 +185,10 @@
     $("heroExpText").textContent = `EXP ${G.fmt(s.hero.exp)} / ${G.fmt(need)}`;
 
     const titles = [
-      "초원의 견습생", "버섯 숲의 친구", "딸기 목장지기", "구름 언덕의 나그네",
-      "별빛 추적자", "유리 정원지기", "달빛 수호자", "쿠키 협곡 개척자",
-      "하늘 정원의 손님", "악몽을 건넌 자", "설원의 나그네", "무지개 항해자",
-      "시간의 친구", "달콤한 정복자", "성검의 주인"
+      "잿더미의 생존자", "곰팡이 숲의 잠입자", "핏빛 목장의 도살자", "잿구름의 방랑자",
+      "성흔의 추적자", "유리 성당의 파괴자", "월식의 순례자", "잿가루 협곡의 개척자",
+      "하늘 성소의 이방인", "악몽을 건넌 자", "성에 설원의 나그네", "썩은 빛의 항해자",
+      "멈춘 시간의 벗", "재의 정복자", "성검의 주인"
     ];
     const ti = Math.min(titles.length - 1, Math.max(0, currentWorld - 1));
     $("heroTitle").textContent = titles[ti];
@@ -196,6 +211,7 @@
       updateBattleFrame();
     } else {
       $("battleView").classList.add("hidden");
+      exitBattleFocus();
       $("stageListView").classList.remove("hidden");
       $("journeyCard").classList.remove("hidden");
       $("skillCard").classList.remove("hidden");
@@ -287,7 +303,7 @@
       <div class="wi-emoji">${w.emoji}</div>
       <div class="wi-copy">
         <b>${w.id}. ${w.name}</b>
-        <span>${prog.unlocked ? w.desc : "이전 세계의 보스를 물리치면 열려요"}</span>
+        <span>${prog.unlocked ? w.desc : "이전 세계의 지배자를 베면 열립니다"}</span>
       </div>
       <div class="wi-bar">
         <div class="bar exp" style="height:8px;"><i style="width:${(prog.cleared / prog.total) * 100}%"></i></div>
@@ -333,10 +349,11 @@
     $("heroSprite").innerHTML = G.sprites.hero(G.tierOf(), {});
     $("autoToggle").checked = !!b.auto;
 
-    const deco2 = { 1: "🌳", 2: "🍄", 3: "🍓", 4: "☁️", 5: "✨", 6: "🦋", 7: "🌙", 8: "🍪", 9: "🕊️", 10: "🏰", 11: "❄️", 12: "🌈", 13: "⏰", 14: "🍫", 15: "👑" };
+    const deco2 = { 1: "🕯️", 2: "🍄", 3: "🩸", 4: "☁️", 5: "✨", 6: "🦋", 7: "🌘", 8: "🪨", 9: "🕊️", 10: "🏰", 11: "❄️", 12: "🌊", 13: "⏳", 14: "🔥", 15: "👑" };
     $("deco1").textContent = b.stage.emoji;
     $("deco2").textContent = deco2[b.stage.world] || "✦";
 
+    enterBattleFocus(!!b.stage.isBoss);
     renderEnemySprite();
     renderSkillBar();
   }
@@ -351,7 +368,8 @@
     $("enemySprite").innerHTML = G.sprites.monster(e, { boss: e.boss });
     $("enemyName").textContent = e.name + (e.boss ? " 👑" : "");
     $("tapHint").style.display = "";
-    if (e.boss) sfx("boss");
+    if (window.VFX) VFX.setBoss(!!e.boss || !!b.stage.isBoss);
+    if (e.boss) { sfx("boss"); vibrate([12, 40, 12]); }
   }
 
   function renderSkillBar() {
@@ -363,11 +381,25 @@
       return `<button class="skill-btn ${unlocked ? "" : "locked"}" data-skill="${sk.id}">
         <span class="sk-ico">${unlocked ? sk.icon : "🔒"}</span>
         <span class="sk-name">${unlocked ? sk.name : "???"}</span>
-        <span class="sk-cd-text">${unlocked ? "Lv." + (ups + 1) : "영웅 Lv." + sk.unlockLv}</span>
+        <span class="sk-cd-text">${unlocked ? "Lv." + (ups + 1) : "서약자 Lv." + sk.unlockLv}</span>
         <span class="sk-cd"></span>
         <span class="sk-remain"></span>
       </button>`;
     }).join("");
+    renderReactBar();
+  }
+
+  /* 방어 · 회피 · 카운터 (지배자 패턴 대응) */
+  function renderReactBar() {
+    const b = G.battle;
+    const pat = b && b.enemy && b.enemy.pattern;
+    const responded = pat && pat.responded;
+    document.querySelectorAll(".react-btn").forEach((btn) => {
+      const live = !!pat && !responded;
+      btn.disabled = !live;
+      btn.classList.toggle("live", live);
+      btn.classList.toggle("done", !!responded);
+    });
   }
 
   function renderWavePips() {
@@ -420,6 +452,14 @@
     setCoin("stoneTop", S().stones);
     setCoin("fragTop", S().relFrags);
 
+    const patNow = b.enemy && b.enemy.pattern;
+    document.querySelectorAll(".react-btn").forEach((btn) => {
+      const live = !!patNow && !patNow.responded;
+      if (btn.disabled === live) btn.disabled = !live;
+      btn.classList.toggle("live", live);
+      btn.classList.toggle("done", !!(patNow && patNow.responded));
+    });
+
     $("biWeapon").textContent = "+" + S().weapon.level;
     $("biAtk").textContent = G.fmt(st.atk);
     $("biCrit").textContent = G.pct(st.critChance);
@@ -441,11 +481,8 @@
     $("ppHint").textContent = pat.hint;
     $("ppTimer").textContent = total.toFixed(1);
     $("ppFill").style.width = "100%";
-    const btn = $("ppAction");
-    btn.disabled = false;
-    btn.textContent = pat.actionLabel;
-    btn.dataset.action = pat.action;
     $("enemyFighter").classList.add(phase === "active" ? "shielded" : "telegraph");
+    renderReactBar();
     sfx("warn");
   }
 
@@ -455,9 +492,7 @@
     $("ppTimer").textContent = timer.toFixed(1);
     if (responded) {
       $("patternPanel").classList.add("responded");
-      const btn = $("ppAction");
-      btn.disabled = true;
-      btn.textContent = "준비 완료! ✨";
+      renderReactBar();
     }
   }
 
@@ -467,6 +502,10 @@
     $("patternPanel").classList.add("hidden");
     $("patternPanel").classList.remove("shield", "responded");
     $("enemyFighter").classList.remove("telegraph");
+    document.querySelectorAll(".react-btn").forEach((btn) => {
+      btn.disabled = true;
+      btn.classList.remove("live", "done");
+    });
   }
 
   /* ===============================================================
@@ -506,12 +545,12 @@
     $("rateDown").parentNode.className = "rate-box " + (rates.down > 25 ? "bad" : "warn");
     $("rateBreak").parentNode.className = "rate-box " + (rates.breakRate > 20 ? "bad" : "warn");
     $("rateNote").textContent = maxed
-      ? "최고 단계예요. 정말 대단해요!"
+      ? "최고 단계입니다. 검이 완성되었습니다."
       : (lv < G.FORGE.safeLv
-        ? "실패해도 단계가 유지되고 장인의 기운이 쌓여요"
+        ? "실패해도 단계가 유지되고 장인의 원한이 쌓입니다"
         : (lv < G.FORGE.breakStartLv
-          ? "실패하면 한 단계 내려가요 (파괴 없음)"
-          : "실패하면 무기가 부서질 수 있어요 · 방지권으로 보호!"));
+          ? "실패하면 한 단계 내려갑니다 (파괴 없음)"
+          : "실패하면 검이 부서질 수 있습니다 · 봉인 부적으로 보호"));
 
     $("pityText").textContent = G.pct(Math.min(100, s.weapon.pity));
     $("pityFill").style.width = Math.min(100, s.weapon.pity) + "%";
@@ -522,7 +561,7 @@
     pt.checked = canProtect ? !!s.weapon.protect : false;
     $("protectCost").textContent = canProtect
       ? `이번 강화에 ${G.fmt(protCost)} G 추가`
-      : (lv >= G.MAX_LV ? "최고 단계에서는 필요 없어요" : "+10강부터 사용할 수 있어요");
+      : (lv >= G.MAX_LV ? "최고 단계에서는 필요 없습니다" : "+10강부터 사용할 수 있습니다");
 
     const btn = $("enhanceBtn");
     if (maxed) {
@@ -531,11 +570,11 @@
       $("enhanceCost").textContent = "더 강화할 수 없어요";
     } else if (s.weapon.pity >= 100) {
       btn.disabled = s.gold < total;
-      $("enhanceMain").textContent = "🌙 기운 발동!";
+      $("enhanceMain").textContent = "🌑 원한 폭발!";
       $("enhanceCost").textContent = `${G.fmt(total)} G`;
     } else {
       btn.disabled = s.gold < total;
-      $("enhanceMain").textContent = s.gold < total ? "🪙 골드 부족" : "⚒️ 강화하기";
+      $("enhanceMain").textContent = s.gold < total ? "🪙 골드 부족" : "⚒ 망치질";
       $("enhanceCost").textContent = `${G.fmt(total)} G`;
     }
 
@@ -637,8 +676,8 @@
     $("achvDone").textContent = done;
     $("achvTotal").textContent = list.length;
     $("achvSummaryText").textContent = ready
-      ? `보상을 받을 업적이 ${ready}개 있어요!`
-      : (done === list.length ? "모든 업적을 달성했어요. 정말 대단해요!" : "사냥과 강화로 업적을 채워보세요.");
+      ? `수령할 업적이 ${ready}개 있습니다.`
+      : (done === list.length ? "모든 업적을 달성했습니다." : "사냥과 망치질로 업적을 채우십시오.");
     $("achvList").innerHTML = list.map(({ def, done: d, claimed }) => {
       const rw = [];
       if (def.reward.gold) rw.push(`🪙 ${G.fmtShort(def.reward.gold)}`);
@@ -828,7 +867,7 @@
       if (!chip) return;
       const id = Number(chip.dataset.world);
       const p = G.worldProgress(id);
-      if (!p.unlocked) { toast("이전 세계의 보스를 먼저 물리쳐 주세요", "bad", "🔒"); return; }
+      if (!p.unlocked) { toast("이전 세계의 지배자를 먼저 베십시오", "bad", "🔒"); return; }
       currentWorld = id;
       sfx("click");
       renderStagePicker();
@@ -841,7 +880,7 @@
       const key = cell.dataset.stage;
       const stage = G.stageByKey(key);
       if (!stage) return;
-      if (!G.stageReached(stage)) { toast("이전 스테이지를 먼저 클리어해 주세요", "bad", "🔒"); return; }
+      if (!G.stageReached(stage)) { toast("이전 구역을 먼저 정복하십시오", "bad", "🔒"); return; }
       currentWorld = stage.world;
       challenge(key);
     });
@@ -851,16 +890,17 @@
       const key = G.battle.stageKey;
       G.flee();
       battleKey = "";
+      exitBattleFocus();
       sfx("click");
       renderHunt();
       renderHeader(false);
-      toast("사냥터로 돌아왔어요", "", "🏃");
+      toast("대장간으로 퇴각했습니다", "", "🏃");
       void key;
     });
 
     $("autoToggle").addEventListener("change", (e) => {
       G.setAuto(e.target.checked);
-      toast(e.target.checked ? "자동 전투를 켰어요" : "자동 전투를 껐어요. 톡톡 눌러 공격!", "", e.target.checked ? "🤖" : "👆");
+      toast(e.target.checked ? "자동 전투를 켰습니다" : "자동 전투를 껐습니다. 직접 눌러 베십시오", "", e.target.checked ? "🤖" : "⚔");
     });
 
     $("enemyFighter").addEventListener("click", () => {
@@ -880,27 +920,42 @@
       const sk = G.SKILLS.find((x) => x.id === id);
       if (!sk) return;
       if (!G.skillUnlocked(sk)) {
-        toast(`영웅 Lv.${sk.unlockLv}에 배울 수 있어요`, "bad", "🔒");
+        toast(`서약자 Lv.${sk.unlockLv}에 각성합니다`, "bad", "🔒");
         return;
       }
       const res = G.useSkill(id);
-      if (!res.ok && res.reason === "cooldown") toast("아직 쿨다운이에요", "", "⏳");
+      if (!res.ok && res.reason === "cooldown") toast("아직 쿨다운입니다", "", "⏳");
       else if (res.ok) {
         if (sk.type === "heal") { sfx("heal"); vibrate(12); }
         else { sfx("crit"); vibrate(16); }
       }
     });
 
-    // 보스 패턴 대응
-    $("ppAction").addEventListener("click", () => {
-      if (!activePattern) return;
-      const action = activePattern.action;
+    // 수동 공격 (컨트롤 바)
+    $("attackBtn").addEventListener("click", () => {
+      if (!G.battle) return;
+      const res = G.tapAttack();
+      if (res.ok) {
+        $("tapHint").style.display = "none";
+        $("attackBtn").classList.remove("hit");
+        void $("attackBtn").offsetWidth;
+        $("attackBtn").classList.add("hit");
+        sfx("tap");
+        vibrate(8);
+      }
+    });
+
+    // 지배자 패턴 대응 (방어 · 회피 · 카운터)
+    $("reactRow").addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-react]");
+      if (!btn || btn.disabled) return;
+      const action = btn.dataset.react;
       const res = G.respond(action);
       if (!res.ok) {
         if (res.reason === "wrong") {
-          toast("지금은 다른 대응이 필요해요!", "bad", "⚠️");
+          toast("지금은 다른 대응이 필요합니다!", "bad", "⚠️");
           $("patternPanel").animate(
-            [{ transform: "translateX(0)" }, { transform: "translateX(-6px)" }, { transform: "translateX(6px)" }, { transform: "translateX(0)" }],
+            [{ transform: "translateX(-50%) translateX(0)" }, { transform: "translateX(-50%) translateX(-6px)" }, { transform: "translateX(-50%) translateX(6px)" }, { transform: "translateX(-50%) translateX(0)" }],
             { duration: 220 }
           );
         }
@@ -909,18 +964,17 @@
       if (res.kind === "guard") { sfx("guard"); floatNum($("heroSprite"), "방어!", "heal"); }
       else if (res.kind === "dodge") { sfx("dodge"); floatNum($("heroSprite"), "회피!", "heal"); }
       else if (res.kind === "counter") { sfx("counter"); vibrate(24); floatNum($("enemySprite"), "카운터!", "crit", "COUNTER"); sparkle($("enemySprite"), 6); }
-      $("ppAction").disabled = true;
-      $("ppAction").textContent = "준비 완료! ✨";
       $("patternPanel").classList.add("responded");
       $("enemyFighter").classList.remove("telegraph");
+      renderReactBar();
     });
 
     // 대장간
     $("enhanceBtn").addEventListener("click", () => {
       const res = G.enhance();
       if (!res.ok) {
-        if (res.reason === "gold") toast("골드가 부족해요. 사냥이나 광맥으로 모아보세요!", "bad", "🪙");
-        if (res.reason === "max") toast("이미 최고 단계예요!", "", "👑");
+        if (res.reason === "gold") toast("골드가 부족합니다. 사냥이나 광맥으로 모으십시오", "bad", "🪙");
+        if (res.reason === "max") toast("이미 최고 단계입니다", "", "👑");
         return;
       }
       onForgeResult(res);
@@ -928,11 +982,11 @@
 
     $("sellBtn").addEventListener("click", () => {
       const lv = S().weapon.level;
-      if (lv <= 0) { toast("지금은 팔 것이 없어요", "", "🪙"); return; }
+      if (lv <= 0) { toast("지금은 팔 것이 없습니다", "", "🪙"); return; }
       confirmModal(
-        `+${lv} 무기를 판매할까요?`,
-        `${G.WEAPONS[lv]}을(를) ${G.fmt(G.sellPrice(lv))} G에 팔고 +0부터 다시 시작해요.`,
-        "판매하기",
+        `+${lv} 검을 매각할까요?`,
+        `${G.WEAPONS[lv]}을(를) ${G.fmt(G.sellPrice(lv))} G에 팔고 +0부터 다시 시작합니다.`,
+        "매각하기",
         () => {
           const r = G.sell();
           if (r.ok) {
@@ -1035,13 +1089,14 @@
     $("exportBtn").addEventListener("click", openExportModal);
     $("importBtn").addEventListener("click", openImportModal);
     $("resetBtn").addEventListener("click", () => {
-      confirmModal("정말 처음부터 시작할까요?", "강화 단계, 영웅, 유물, 도감 기록이 모두 사라져요. 되돌릴 수 없어요.", "모두 지우기", () => {
+      confirmModal("정말 처음부터 시작할까요?", "강화 단계, 서약자, 유물, 도감 기록이 모두 사라집니다. 되돌릴 수 없습니다.", "모두 지우기", () => {
         G.reset();
         battleKey = "";
         forgeSwordLevel = null;
         currentWorld = 1;
+        exitBattleFocus();
         renderAll();
-        toast("새로운 모험을 시작해요!", "", "🌱");
+        toast("새로운 서약이 시작됩니다", "", "🌑");
         switchTab("hunt");
       }, true);
     });
@@ -1100,24 +1155,24 @@
       sfx("fail");
       vibrate(30);
       showForgeToast(`📉 실패… +${lv}로 내려갔어요`, "bad");
-      G.log(`📉 강화 실패! +${lv}로 하락했어요. (기운 +${Math.round(res.pity)}%)`, "fail");
+      G.log(`📉 강화 실패! +${lv}로 하락했습니다. (원한 +${Math.round(res.pity)}%)`, "fail");
     } else if (res.kind === "maintain") {
       animateSword("shake");
       sfx("fail");
-      showForgeToast(`🌀 유지… 기운 +${Math.round(res.pity)}%`, "");
-      G.log(`🌀 강화 실패, +${lv} 그대로예요. 장인의 기운이 쌓였어요.`, "fail");
+      showForgeToast(`🌀 유지… 원한 +${Math.round(res.pity)}%`, "");
+      G.log(`🌀 강화 실패, +${lv} 그대로입니다. 장인의 원한이 쌓였습니다.`, "fail");
     } else if (res.kind === "protected") {
       animateSword("shake");
       sfx("fail");
       vibrate(20);
-      showForgeToast("🛡️ 방지권이 무기를 지켰어요!", "");
-      G.log(`🛡️ 파괴 방지권 발동! +${lv} 무기를 지켰어요.`, "");
+      showForgeToast("🛡 봉인 부적이 검을 지켰습니다", "");
+      G.log(`🛡 봉인 부적 발동! +${lv} 검을 지켰습니다.`, "");
     } else if (res.kind === "break") {
       animateSword("cracked");
       sfx("break");
       vibrate([40, 40, 60]);
-      showForgeToast("💥 무기 파괴! +0으로…", "bad");
-      G.log(`💥 +${res.from} 무기가 부서졌어요. 다시 강화해요!`, "fail");
+      showForgeToast("💥 검 파괴! +0으로…", "bad");
+      G.log(`💥 +${res.from} 검이 부서졌습니다. 다시 벼리십시오.`, "fail");
       sparkle($("forgeVisual"), 6);
     }
     renderForge();
@@ -1133,10 +1188,11 @@
     const stage = G.stageByKey(key);
     const r = G.startBattle(key);
     if (!r.ok) {
-      toast(r.reason === "locked" ? "아직 잠긴 사냥터예요" : "사냥을 시작할 수 없어요", "bad", "🔒");
+      toast(r.reason === "locked" ? "아직 봉인된 구역입니다" : "사냥을 시작할 수 없습니다", "bad", "🔒");
       return;
     }
     battleKey = "";
+    enterBattleFocus(!!(stage && stage.isBoss));
     switchTab("hunt");
     renderHunt();
     renderHeader(true);
@@ -1152,6 +1208,7 @@
 
   function onVictory(res) {
     battleKey = "";
+    exitBattleFocus();
     renderAll();
     sfx("win");
     vibrate([20, 40, 20]);
@@ -1162,8 +1219,8 @@
     openModal(
       `<div class="modal-hero">
         <div class="modal-emoji">${boss ? "👑" : first ? "🎉" : "🌟"}</div>
-        <h3>${boss ? "보스 격파!" : "스테이지 클리어!"}</h3>
-        <p class="modal-sub">${res.stage.label} ${res.stage.name}${boss ? "의 보스를 물리쳤어요!" : (first ? " · 새로운 사냥터가 열렸어요!" : ` · ${res.cleared}번째 클리어예요.`)}</p>
+        <h3>${boss ? "지배자 격파" : "구역 정복"}</h3>
+        <p class="modal-sub">${res.stage.label} ${res.stage.name}${boss ? "의 지배자를 베었습니다." : (first ? " · 새로운 구역이 열렸습니다." : ` · ${res.cleared}번째 정복입니다.`)}</p>
       </div>
       <div class="modal-body">
         <div class="reward-grid">
@@ -1171,12 +1228,12 @@
           <div class="reward-cell"><div class="rc-ico">💎</div><div class="rc-val">${res.stones}</div><div class="rc-name">강화석</div></div>
           <div class="reward-cell"><div class="rc-ico">🔮</div><div class="rc-val">${res.frags}</div><div class="rc-name">유물조각</div></div>
         </div>
-        ${boss ? `<div class="modal-list"><div class="ml-row"><span>보스 보너스</span><b>유물 조각 대량 획득!</b></div></div>` : ""}
-        ${res.unlockedNext ? `<div class="modal-list"><div class="ml-row"><span>새 사냥터</span><b>${res.unlockedNext.label} ${res.unlockedNext.name}</b></div></div>` : ""}
+        ${boss ? `<div class="modal-list"><div class="ml-row"><span>지배자 전리품</span><b>유물 파편 대량 획득</b></div></div>` : ""}
+        ${res.unlockedNext ? `<div class="modal-list"><div class="ml-row"><span>새 구역</span><b>${res.unlockedNext.label} ${res.unlockedNext.name}</b></div></div>` : ""}
       </div>
       <div class="modal-actions cols">
-        <button class="btn btn-ghost" id="mvStop">사냥터로</button>
-        <button class="btn btn-primary" id="mvAgain">${follow && follow.key !== res.stage.key ? "다음 사냥터" : "한 번 더"}</button>
+        <button class="btn btn-ghost" id="mvStop">대장간으로</button>
+        <button class="btn btn-primary" id="mvAgain">${follow && follow.key !== res.stage.key ? "다음 구역" : "한 번 더"}</button>
       </div>`,
       {
         onMount() {
@@ -1205,17 +1262,18 @@
 
   function onDefeat(res) {
     battleKey = "";
+    exitBattleFocus();
     renderAll();
     sfx("fail");
     vibrate(60);
     openModal(
       `<div class="modal-hero">
         <div class="modal-emoji">💫</div>
-        <h3>쓰러졌어요…</h3>
-        <p class="modal-sub">${res.stage.label} ${res.stage.name}의 몬스터가 너무 강했나 봐요.<br />체력은 35%까지 회복했어요.</p>
+        <h3>쓰러졌습니다…</h3>
+        <p class="modal-sub">${res.stage.label} ${res.stage.name}의 존재가 너무 강했습니다.<br />체력은 35%까지 회복했습니다.</p>
       </div>
       <div class="modal-body">
-        <div class="tip-box">💡 대장간에서 무기를 강화하거나 유물로 공격력을 올려보세요. 보스의 강타는 '방어', 돌진은 '회피', 보호막은 '카운터'로 대응하면 훨씬 안전해요!</div>
+        <div class="tip-box">💡 대장간에서 검을 벼리거나 유물로 공격력을 올리십시오. 강타는 '방어', 돌진은 '회피', 보호막은 '카운터'로 받아내면 훨씬 안전합니다.</div>
       </div>
       <div class="modal-actions cols">
         <button class="btn btn-ghost" id="mdForge">대장간</button>
@@ -1239,8 +1297,8 @@
     openModal(
       `<div class="modal-hero">
         <div class="modal-emoji">🌙</div>
-        <h3>다녀오셨네요!</h3>
-        <p class="modal-sub">${timeText} 동안 몽글 친구들이 열심히 모아두었어요.<br />(최대 ${reward.hours.toFixed(1)}시간)</p>
+        <h3>돌아오셨군요.</h3>
+        <p class="modal-sub">${timeText} 동안 심연의 잔재들이 무언가를 모아두었습니다.<br />(최대 ${reward.hours.toFixed(1)}시간)</p>
       </div>
       <div class="modal-body">
         <div class="reward-grid">
@@ -1248,10 +1306,10 @@
           <div class="reward-cell"><div class="rc-ico">💎</div><div class="rc-val">${reward.stones}</div><div class="rc-name">강화석</div></div>
           <div class="reward-cell"><div class="rc-ico">🌱</div><div class="rc-val">${G.fmtShort(reward.exp)}</div><div class="rc-name">경험치</div></div>
         </div>
-        <div class="tip-box" style="margin-top:10px;">⏳ 달빛 모래시계 유물을 올리면 더 많이, 더 오래 모여요.</div>
+        <div class="tip-box" style="margin-top:10px;">⏳ 월식 모래시계 유물을 올리면 더 많이, 더 오래 모입니다.</div>
       </div>
       <div class="modal-actions">
-        <button class="btn btn-primary" id="moOk">잘 받았어요!</button>
+        <button class="btn btn-primary" id="moOk">받아들이겠습니다</button>
       </div>`,
       { onMount() { $("moOk").onclick = () => { closeModal(); sfx("coin"); renderAll(); }; } }
     );
@@ -1260,18 +1318,18 @@
   function showWelcome() {
     openModal(
       `<div class="modal-hero">
-        <div class="modal-emoji">⚒️</div>
-        <h3>몽글 대장간에 오신 걸 환영해요!</h3>
-        <p class="modal-sub">성검을 강화하고 15개 세계를 여행하며<br />별빛 성검을 완성해 보세요.</p>
+        <div class="modal-emoji">⚔</div>
+        <h3>심연의 대장간에 발을 들였습니다.</h3>
+        <p class="modal-sub">저주받은 성검을 벼리고 15개의 황폐한 세계를 베어 나가십시오.</p>
       </div>
       <div class="welcome-tips">
-        <div class="welcome-tip"><div class="wt-ico">⚒️</div><div><b>강화</b><p>+0에서 +25까지. 실패하면 내려가고, +10강부터는 부서질 수 있어요.</p></div></div>
-        <div class="welcome-tip"><div class="wt-ico">⚔️</div><div><b>사냥</b><p>몬스터를 톡톡 눌러 공격! 강화된 무기가 높은 세계를 열어줘요.</p></div></div>
-        <div class="welcome-tip"><div class="wt-ico">👑</div><div><b>보스</b><p>X-10, X-15는 보스방! 경고가 뜨면 방어·회피·카운터로 대응해요.</p></div></div>
-        <div class="welcome-tip"><div class="wt-ico">💾</div><div><b>자동 저장</b><p>모든 진행은 자동으로 저장돼요. 앱을 닫아도 이어서 즐겨요.</p></div></div>
+        <div class="welcome-tip"><div class="wt-ico">⚒️</div><div><b>망치질</b><p>+0에서 +25까지. 실패하면 내려가고, +10강부터는 부서질 수 있습니다.</p></div></div>
+        <div class="welcome-tip"><div class="wt-ico">⚔️</div><div><b>사냥</b><p>화면의 '공격' 버튼이나 몬스터를 직접 눌러 벱니다. 스킬창에서 기술을 씁니다.</p></div></div>
+        <div class="welcome-tip"><div class="wt-ico">👁️</div><div><b>지배자</b><p>X-10, X-15는 지배자의 방. 아래 방어·회피·카운터 버튼으로 패턴을 받아냅니다.</p></div></div>
+        <div class="welcome-tip"><div class="wt-ico">💾</div><div><b>자동 저장</b><p>모든 진행은 자동으로 저장됩니다. 앱을 닫아도 이어집니다.</p></div></div>
       </div>
       <div class="modal-actions">
-        <button class="btn btn-primary" id="mwStart">모험 시작!</button>
+        <button class="btn btn-primary" id="mwStart">서약한다</button>
       </div>`,
       {
         closable: false,
@@ -1459,8 +1517,7 @@
     G.bus.on("battle:respond", () => {
       $("patternPanel").classList.add("responded");
       $("enemyFighter").classList.remove("telegraph");
-      $("ppAction").disabled = true;
-      $("ppAction").textContent = "준비 완료! ✨";
+      renderReactBar();
     });
     G.bus.on("battle:patternResolve", (p) => {
       hidePattern();
@@ -1562,7 +1619,7 @@
     const disabled = s.gold < cost;
     if ($("enhanceBtn").disabled !== disabled) {
       $("enhanceBtn").disabled = disabled;
-      $("enhanceMain").textContent = disabled ? "🪙 골드 부족" : (s.weapon.pity >= 100 ? "🌙 기운 발동!" : "⚒️ 강화하기");
+      $("enhanceMain").textContent = disabled ? "🪙 골드 부족" : (s.weapon.pity >= 100 ? "🌑 원한 폭발!" : "⚒ 망치질");
     }
   }
 
@@ -1571,6 +1628,7 @@
      =============================================================== */
   function start() {
     G.boot();
+    if (window.VFX && $("vfxCanvas")) VFX.init($("vfxCanvas"));
     bindEvents();
     bindGameEvents();
     renderAll();

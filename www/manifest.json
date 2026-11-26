@@ -1,13 +1,13 @@
 {
-  "name": "몽글 대장간: 별빛 성검 키우기",
-  "short_name": "몽글 대장간",
-  "description": "아기자기한 강화·사냥 RPG. 성검을 강화하고 15개 세계의 몽글 몬스터와 보스를 사냥해 유물을 모아요.",
+  "name": "심연의 대장간: 저주받은 성검",
+  "short_name": "심연의 대장간",
+  "description": "저주받은 성검을 벼려 15개의 황폐한 세계를 베어 넘기는 다크 판타지 강화·사냥 RPG.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#fff8ef",
-  "theme_color": "#ffe3c4",
+  "background_color": "#06050a",
+  "theme_color": "#0b0910",
   "lang": "ko",
   "categories": ["games", "entertainment"],
   "icons": [

@@ -1,8 +1,8 @@
 {
-  "name": "mongle-forge-rpg",
-  "version": "2.1.0",
+  "name": "abyss-forge-rpg",
+  "version": "3.0.0",
   "private": true,
-  "description": "몽글 대장간: 별빛 성검 키우기 - Capacitor Android wrapper",
+  "description": "심연의 대장간: 저주받은 성검 - Capacitor Android wrapper (dark fantasy RPG)",
   "scripts": {
     "sync": "cap sync android",
     "build:apk": "cd android && ./gradlew assembleDebug"

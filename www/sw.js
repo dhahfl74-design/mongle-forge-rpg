@@ -1,5 +1,5 @@
 /* 몽글 대장간 — 오프라인 캐시 서비스 워커 */
-const CACHE_NAME = "mongle-forge-v2-1-0";
+const CACHE_NAME = "abyss-forge-v3-0-0";
 const ASSETS = [
   "./",
   "./index.html",
@@ -7,6 +7,7 @@ const ASSETS = [
   "./js/data.js",
   "./js/sprites.js",
   "./js/core.js",
+  "./js/vfx.js",
   "./js/ui.js",
   "./manifest.json",
   "./icons/icon-192.png",

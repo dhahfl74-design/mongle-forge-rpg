@@ -216,7 +216,7 @@
       const parsed = JSON.parse(text);
       const data = parsed && parsed.data ? parsed.data : parsed;
       if (!isObj(data) || !isObj(data.weapon) || !isObj(data.hero)) {
-        return { ok: false, reason: "이 파일은 몽글 대장간 저장 파일이 아니에요." };
+        return { ok: false, reason: "이 파일은 심연의 대장간 저장 파일이 아닙니다." };
       }
       state = sanitize(mergeDeep(defaults(), data));
       state.hero.hp = Math.min(state.hero.hp, hpCapOf(state));
@@ -226,7 +226,7 @@
       emit("import");
       return { ok: true };
     } catch (e) {
-      return { ok: false, reason: "저장 파일을 읽지 못했어요. (JSON 형식 오류)" };
+      return { ok: false, reason: "저장 파일을 읽지 못했습니다. (JSON 형식 오류)" };
     }
   };
 
@@ -368,7 +368,7 @@
     if (ups > 0) {
       const st = G.heroStats();
       state.hero.hp = st.maxHp;
-      G.log(`🌱 영웅이 Lv.${state.hero.level}이 되었어요! 체력이 가득 찼어요.`, "level");
+      G.log(`⚔ 서약자가 Lv.${state.hero.level}이 되었습니다. 체력이 회복되었습니다.`, "level");
       emit("hero:levelup", { level: state.hero.level, ups: ups });
       checkSkillsUnlock();
     }
@@ -382,7 +382,7 @@
           prev[sk.id] = true;
           state._unlockedSkills = prev;
           emit("skill:unlock", sk);
-          G.log(`📖 새 스킬 [${sk.name}]을 배웠어요!`, "level");
+          G.log(`🌑 새 기술 [${sk.name}]을 각성했습니다!`, "level");
         }
       }
     });
@@ -457,7 +457,7 @@
     state.stats.sells += 1;
     state.weapon.level = 0;
     G.save();
-    G.log(`💰 +${lv} ${G.WEAPONS[lv]}을(를) 팔아 ${G.fmt(price)} 골드를 받았어요.`);
+    G.log(`💰 +${lv} ${G.WEAPONS[lv]}을(를) 매각해 ${G.fmt(price)} 골드를 받았습니다.`);
     emit("forge:sell", { price, from: lv });
     checkAchievements();
     return { ok: true, price };
@@ -511,7 +511,7 @@
     cur.u = true;
     cur.lv = 1;
     G.save();
-    G.log(`🔮 유물 [${r.name}]을(를) 깨웠어요!`, "relic");
+    G.log(`🔮 유물 [${r.name}]을(를) 각성했습니다!`, "relic");
     emit("relic:unlock", { relic: r });
     checkAchievements();
     return { ok: true };
@@ -756,7 +756,7 @@
     const st = G.heroStats();
     state.hero.hp = Math.round(st.maxHp * 0.35);
     emit("battle:defeat", { stage: b.stage });
-    G.log(`💫 ${b.stage.label} ${b.stage.name}에서 쓰러졌어요... 다시 도전해요!`, "fail");
+    G.log(`💫 ${b.stage.label} ${b.stage.name}에서 쓰러졌습니다... 다시 서약하십시오.`, "fail");
     G.battle = null;
     G.save();
   }
@@ -857,7 +857,7 @@
     G.battle = null;
     G.save();
     emit("battle:victory", result);
-    G.log(`🎉 ${stage.label} ${stage.name} 클리어! (+${G.fmt(gold)}골드${stage.isBoss ? " · 보스 격파!" : ""})`, "win");
+    G.log(`🎉 ${stage.label} ${stage.name} 정복! (+${G.fmt(gold)}골드${stage.isBoss ? " · 지배자 격파" : ""})`, "win");
     checkAchievements();
   }
 
@@ -1114,7 +1114,7 @@
     G.load();
     checkSkillsUnlock();
     checkAchievements();
-    G.log("🌿 몽글 대장간에 오신 것을 환영해요!", "welcome");
+    G.log("⚔ 심연의 대장간에 발을 들였습니다.", "welcome");
   };
 
   /* ---------------- 디버그 (테스트용) ---------------- */
