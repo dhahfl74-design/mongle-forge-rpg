@@ -3943,3 +3943,16 @@ body.battle-focus #patternPanel .pp-timer { font-size: 14px; }
   background: linear-gradient(90deg, rgba(255, 120, 60, 0.42), rgba(255, 50, 44, 0.58));
   box-shadow: 0 0 22px rgba(255, 90, 50, 0.6);
 }
+
+/* 넓은 데스크톱에서 전투 화면이 과하게 늘어나지 않게 */
+@media (min-width: 900px) {
+  body.battle-focus #tab-hunt {
+    left: 50%;
+    right: auto;
+    width: min(96vw, 1180px);
+    transform: translateX(-50%);
+    border-left: 1px solid rgba(122, 79, 192, 0.18);
+    border-right: 1px solid rgba(122, 79, 192, 0.18);
+  }
+  body.battle-focus #tab-hunt #battleView .arena { width: min(86%, 860px) !important; }
+}
