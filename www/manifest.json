@@ -1,0 +1,33 @@
+{
+  "name": "몽글 대장간: 별빛 성검 키우기",
+  "short_name": "몽글 대장간",
+  "description": "아기자기한 강화·사냥 RPG. 성검을 강화하고 15개 세계의 몽글 몬스터와 보스를 사냥해 유물을 모아요.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#fff8ef",
+  "theme_color": "#ffe3c4",
+  "lang": "ko",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
