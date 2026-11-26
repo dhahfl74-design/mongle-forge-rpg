@@ -1,5 +1,5 @@
 /* 심연의 대장간 v5.0 — 오프라인 캐시 (상자깡 리부트) */
-const CACHE_NAME = "abyss-forge-v5-lootbox-art1";
+const CACHE_NAME = "abyss-forge-v5-lootbox-art2";
 const ASSETS = [
   "./",
   "./index.html",
@@ -64,29 +64,41 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+function putInCache(req, res) {
+  if (!res || res.status !== 200) return res;
+  const copy = res.clone();
+  caches.open(CACHE_NAME).then((cache) => cache.put(req, copy)).catch(() => {});
+  return res;
+}
+
 self.addEventListener("fetch", (event) => {
-  if (event.request.method !== "GET") return;
-  const url = new URL(event.request.url);
+  const req = event.request;
+  if (req.method !== "GET") return;
+  const url = new URL(req.url);
+
+  // 외부(폰트 등): 네트워크 우선
   if (url.origin !== self.location.origin) {
+    event.respondWith(fetch(req).then((res) => putInCache(req, res)).catch(() => caches.match(req)));
+    return;
+  }
+
+  const isDoc = req.mode === "navigate" || (req.headers.get("accept") || "").includes("text/html");
+  const isCode = /\.(?:js|css|json|webmanifest)$/.test(url.pathname) || url.pathname.endsWith("/");
+
+  // 문서와 코드는 네트워크 우선 — 새 버전이 바로 반영된다
+  if (isDoc || isCode) {
     event.respondWith(
-      fetch(event.request).then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy)).catch(() => {});
-        return res;
-      }).catch(() => caches.match(event.request))
+      fetch(req).then((res) => putInCache(req, res)).catch(() =>
+        caches.match(req).then((cached) => cached || (isDoc ? caches.match("./index.html") : undefined))
+      )
     );
     return;
   }
+
+  // 이미지·아이콘은 캐시 우선
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const network = fetch(event.request).then((res) => {
-        if (res && res.status === 200) {
-          const copy = res.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy)).catch(() => {});
-        }
-        return res;
-      }).catch(() => cached);
-      return cached || network;
-    })
+    caches.match(req).then((cached) =>
+      cached || fetch(req).then((res) => putInCache(req, res)).catch(() => cached)
+    )
   );
 });
