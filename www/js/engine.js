@@ -42,9 +42,10 @@
       stones: 0,
       frags: 0,
       hero: { lv: 1, exp: 0 },
-      chest: { lv: 1, auto: false, autoSalvage: "none" },
+      chest: { lv: 1, auto: false, autoEquip: false, autoSalvage: "none" },
       progress: { stage: 1, maxStage: 1, cleared: {}, world: 1 },
       equip: { weapon: null, helm: null, armor: null, ring: null },
+      inventory: [],
       forgeItem: null,
       enhance: { pity: 0, seal: 0, protect: false },
       seen: {},
@@ -264,6 +265,7 @@
       const it = S.equip[sl.key];
       if (it && typeof it !== "object") S.equip[sl.key] = null;
     });
+    normalizeInventory();
     if (!S.seen) S.seen = {};
     if (!S.milestones) S.milestones = {};
     if (!S.relics) S.relics = {};
@@ -364,6 +366,7 @@
     if (S.keys < n) return { ok: false, reason: "keys" };
     const results = [];
     const used = new Set();
+    let stored = 0, replaced = 0, fullDismantled = 0;
     for (let i = 0; i < n; i++) {
       S.keys -= 1;
       S.stats.pulls += 1;
@@ -380,44 +383,208 @@
         const rarIdx = G.RARITY_BY_KEY[it.rarity].idx;
         if (rarIdx < threshold) { autoSalvage(it); it.salvaged = true; }
       }
+      // 자동 장착: 지금 장착한 것보다 강하면 바로 장착
+      if (!it.salvaged && S.chest.autoEquip) {
+        const eq = S.equip[it.slot];
+        if (!eq || G.itemScore(it) > G.itemScore(eq)) {
+          G.equipItem(it, { silent: true });
+          it.equippedNow = true;
+        }
+      }
+      // 나머지는 전부 보관함으로 — 개봉 카드를 놓치거나 닫아도 사라지지 않는다
+      if (!it.salvaged && !it.equippedNow) {
+        const res = G.storeItem(it, { silent: true });
+        if (res.ok) { stored += 1; if (res.replaced) replaced += 1; }
+        else if (res.reason === "full") { fullDismantled += 1; }
+      }
     }
     emit("pull", results);
+    if (stored) emit("inventory", { kind: "add", items: results });
+    if (replaced || fullDismantled) {
+      emit("toast", {
+        kind: "salvage",
+        text: "🎒 보관함이 가득 차 " + (replaced ? "약한 장비 " + replaced + "개 교체 분해" : "새 장비 " + fullDismantled + "개 분해")
+      });
+    }
     G.saveSoon();
-    return { ok: true, items: results };
+    return { ok: true, items: results, stored: stored, replaced: replaced, full: fullDismantled };
   };
 
   function autoSalvage(it) {
+    return salvageQuiet(it);
+  }
+
+  /* 분해 보상을 조용히 지급 (토스트 없음) */
+  function salvageQuiet(it) {
     const r = G.salvage(it);
     gainGold(r.gold); gainStones(r.stones); gainExp(r.exp);
     S.stats.salvaged += 1;
+    return r;
   }
 
   G.salvageItem = function (it) {
-    const r = G.salvage(it);
-    gainGold(r.gold); gainStones(r.stones); gainExp(r.exp);
-    S.stats.salvaged += 1;
+    const r = salvageQuiet(it);
+    G.invRemove(it.uid);
+    if (S.forgeItem && S.forgeItem.uid === it.uid) S.forgeItem = null;
     emit("toast", { kind: "salvage", text: "분해 · +" + G.fmt(r.gold) + " G" + (r.stones ? " · 💠" + r.stones : "") });
+    emit("inventory", { kind: "remove", item: it });
     G.saveSoon();
     return r;
   };
 
+  /* ---------------- 보관함 (장비 인벤토리) ---------------- */
+  const INV_MAX = () => G.INV.max;
+
+  G.invCount = () => S.inventory.length;
+  G.invMax = () => INV_MAX();
+  G.invFull = () => S.inventory.length >= INV_MAX();
+  G.invFind = function (uid) {
+    return S.inventory.find((x) => x && x.uid === uid) || null;
+  };
+  G.invRemove = function (uid) {
+    const i = S.inventory.findIndex((x) => x && x.uid === uid);
+    if (i < 0) return false;
+    S.inventory.splice(i, 1);
+    return true;
+  };
+  /* 전투력 높은 순으로 정렬한 사본 */
+  G.invSorted = function () {
+    return S.inventory.slice().sort((a, b) => G.itemScore(b) - G.itemScore(a));
+  };
+
+  function normalizeInventory() {
+    if (!Array.isArray(S.inventory)) S.inventory = [];
+    const seen = new Set();
+    S.inventory = S.inventory.filter((it) => {
+      if (!it || typeof it !== "object" || !it.uid || !it.slot || !G.SLOT_BY_KEY[it.slot]) return false;
+      if (!it.atk || !G.RARITY_BY_KEY[it.rarity]) return false;
+      if (seen.has(it.uid)) return false;
+      seen.add(it.uid);
+      return true;
+    });
+    // 장착 중인 장비는 보관함에서 빼둔다 (중복 방지)
+    G.SLOTS.forEach((sl) => {
+      const eq = S.equip[sl.key];
+      if (eq && eq.uid) G.invRemove(eq.uid);
+    });
+    // 용량을 넘은 옛 저장은 약한 것부터 분해해 골드로 돌려준다
+    while (S.inventory.length > INV_MAX()) {
+      let wi = 0, ws = Infinity;
+      S.inventory.forEach((x, i) => { const sc = G.itemScore(x); if (sc < ws) { ws = sc; wi = i; } });
+      const drop = S.inventory.splice(wi, 1)[0];
+      const r = G.salvage(drop);
+      S.gold += r.gold; S.stones += r.stones;
+    }
+  }
+
+  /* 새 장비를 보관함에 넣는다.
+     반환: { ok, stored, replaced?, salvage?, reason? }
+     - 가득 찼을 때: 새 장비가 가장 약한 보관 장비보다 강하면 그 약한 장비를 분해하고 교체,
+       아니면 새 장비를 분해한다. (noSwap: 교체 없이 새 장비 분해) */
+  G.storeItem = function (it, opts) {
+    opts = opts || {};
+    if (!it) return { ok: false, reason: "noitem" };
+    if (G.invFind(it.uid)) return { ok: true, already: true, stored: true };
+    const eq = it.slot ? S.equip[it.slot] : null;
+    if (eq && eq.uid === it.uid) return { ok: false, reason: "equipped" };
+
+    if (S.inventory.length < INV_MAX()) {
+      it.stored = true;
+      it.isNewInv = true;
+      S.inventory.push(it);
+      if (!opts.silent) emit("inventory", { kind: "add", item: it });
+      return { ok: true, stored: true };
+    }
+
+    if (opts.noSwap) {
+      const r = salvageQuiet(it);
+      it.salvaged = true;
+      return { ok: false, reason: "full", salvage: r };
+    }
+
+    let wi = 0, ws = Infinity;
+    S.inventory.forEach((x, i) => { const sc = G.itemScore(x); if (sc < ws) { ws = sc; wi = i; } });
+    const weakest = S.inventory[wi];
+    if (weakest && G.itemScore(it) > ws) {
+      S.inventory.splice(wi, 1);
+      weakest.salvaged = true;
+      const r = salvageQuiet(weakest);
+      it.stored = true;
+      it.isNewInv = true;
+      S.inventory.push(it);
+      emit("inventory", { kind: "replace", item: it, replaced: weakest, salvage: r });
+      return { ok: true, stored: true, replaced: weakest, salvage: r };
+    }
+    const r = salvageQuiet(it);
+    it.salvaged = true;
+    return { ok: false, reason: "full", salvage: r };
+  };
+
+  /* 보관함에서 여러 개를 한 번에 분해 */
+  G.salvageMany = function (list) {
+    let gold = 0, stones = 0, n = 0;
+    (list || []).slice().forEach((it) => {
+      if (!it || it.salvaged) return;
+      const r = salvageQuiet(it);
+      it.salvaged = true;
+      G.invRemove(it.uid);
+      if (S.forgeItem && S.forgeItem.uid === it.uid) S.forgeItem = null;
+      gold += r.gold; stones += r.stones; n += 1;
+    });
+    if (n) {
+      emit("inventory", { kind: "bulk" });
+      G.saveSoon();
+    }
+    return { count: n, gold: gold, stones: stones };
+  };
+
+  /* 일괄 분해 대상 */
+  G.bulkTargets = function (mode) {
+    return S.inventory.filter((it) => {
+      if (!it || it.salvaged) return false;
+      if (mode === "rarity") return G.RARITY_BY_KEY[it.rarity].idx <= 2;
+      const eq = S.equip[it.slot];
+      if (!eq) return false; // 빈 슬롯은 건드리지 않는다
+      return G.itemScore(it) < G.itemScore(eq);
+    });
+  };
+
+  G.bulkSalvage = function (mode) {
+    const list = G.bulkTargets(mode);
+    if (!list.length) return { count: 0, gold: 0, stones: 0 };
+    const r = G.salvageMany(list);
+    emit("toast", { kind: "salvage", text: "일괄 분해 · " + r.count + "개 · +" + G.fmt(r.gold) + " G" + (r.stones ? " · 💠" + r.stones : "") });
+    return r;
+  };
+
   /* ---------------- 장착 ---------------- */
-  G.equipItem = function (it) {
+  G.equipItem = function (it, opts) {
     if (!it) return null;
+    opts = opts || {};
     const prev = S.equip[it.slot] || null;
+    if (prev && prev.uid === it.uid) { it.isNew = false; return prev; }
     S.equip[it.slot] = it;
+    // 장착한 장비는 보관함에서 빠진다
+    G.invRemove(it.uid);
     // 모루 위 장비가 방금 장착한 장비였다면 모루는 비운다
     if (S.forgeItem && S.forgeItem.uid === it.uid) S.forgeItem = null;
-    // 밀려난 장비는 자동 분해 (기존 설계 유지)
     it.isNew = false;
+    it.stored = false;
+    // 밀려난 장비는 분해하지 않고 보관함으로 (가득 차면 그때만 분해)
+    let prevStored = false;
     if (prev) {
-      const r = G.salvage(prev);
-      gainGold(r.gold); gainStones(r.stones); gainExp(r.exp);
-      S.stats.salvaged += 1;
+      const res = G.storeItem(prev, { silent: true, noSwap: true });
+      prevStored = !!res.ok;
     }
     if (!S.forgeItem) S.forgeItem = it;
     emit("equip", it);
-    emit("toast", { kind: "equip", text: it.name + " 장착" + (prev ? " · 이전 장비 분해" : "") });
+    emit("inventory", { kind: "swap", item: it });
+    if (!opts.silent) {
+      emit("toast", {
+        kind: "equip",
+        text: it.name + " 장착" + (prev ? (prevStored ? " · 이전 장비 보관함" : " · 보관함 가득 · 이전 장비 분해") : "")
+      });
+    }
     G.saveSoon();
     return prev;
   };
@@ -492,6 +659,8 @@
       gainGold(Math.round(r.gold * 0.4));
       if (S.forgeItem && S.forgeItem.uid === it.uid) S.forgeItem = null;
       if (S.equip[it.slot] && S.equip[it.slot].uid === it.uid) S.equip[it.slot] = null;
+      G.invRemove(it.uid);
+      emit("inventory", { kind: "remove", item: it });
       emit("enhance", { ok: false, broke: true, name: it.name });
       emit("toast", { kind: "break", text: it.name + " 파괴… +" + it.lv + "이 사라졌습니다" });
       G.saveSoon();

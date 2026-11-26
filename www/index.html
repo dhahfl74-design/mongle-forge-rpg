@@ -8,12 +8,12 @@
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="심연의 대장간" />
-<meta name="description" content="상자를 깨고, 장비를 벼리고, 72종 장비를 수집하는 다크 판타지 강화·수집·상자깡 RPG." />
+<meta name="description" content="상자를 깨고, 장비를 벼리고, 72종 장비를 수집하는 다크 판타지 강화·수집·상자깡 RPG. 보관함으로 장비를 모아두고 골라 장착하세요." />
 <link rel="manifest" href="./manifest.json" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Gothic+A1:wght@400;500;700;800;900&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="./css/style.css?v=5.0.0" />
+<link rel="stylesheet" href="./css/style.css?v=5.1.0" />
 <link rel="preload" as="image" href="./assets/items/chest-ornate.webp" />
 <title>심연의 대장간 · 강화 수집 상자깡</title>
 <script>
@@ -186,6 +186,18 @@
     <section class="page" id="page-forge">
       <div class="slots-grid" id="slotsGrid"></div>
 
+      <div class="card inv-card" id="invCard">
+        <div class="card-head">
+          <div class="ch-title"><span class="ch-ico">🎒</span><div><b>보관함 <span id="invCount">0 / 40</span></b><span id="invSub">획득 장비 자동 보관 · 전투력 순</span></div></div>
+          <button class="btn btn-ghost sm" id="invBulkBtn">일괄 분해</button>
+        </div>
+        <div class="inv-tools" id="invTools">
+          <button class="btn btn-ghost sm" data-bulk="weaker">⚔ 장착품보다 약한 장비 분해</button>
+          <button class="btn btn-ghost sm" data-bulk="rarity">💠 희귀 이하 일괄 분해</button>
+        </div>
+        <div class="inv-grid" id="invGrid"></div>
+      </div>
+
       <div class="card forge-card">
         <div class="card-head">
           <div class="ch-title"><span class="ch-ico">⚒</span><div><b>강화 모루</b><span>모루 위 장비만 강화됩니다</span></div></div>
@@ -312,9 +324,9 @@
       </div>
 
       <div class="credits">
-        <b>심연의 대장간 v5.0</b><br />
+        <b>심연의 대장간 v5.1</b><br />
         15세계 · 180구역 · 장비 72종 · 6등급 · 강화 +20 · 상자 20레벨<br />
-        상자깡 · 강화 · 수집 특화 리부트
+        상자깡 · 강화 · 수집 · 🎒 보관함
       </div>
     </section>
   </main>
@@ -327,6 +339,7 @@
     </button>
     <button class="nav-btn" data-tab="forge">
       <span class="nb-ico"><svg><use href="#i-hammer"/></svg></span><span class="nb-txt">모루</span>
+      <i class="nb-dot" id="dotForge"></i>
     </button>
     <button class="nav-btn" data-tab="codex">
       <span class="nb-ico"><svg><use href="#i-book"/></svg></span><span class="nb-txt">도감</span>
@@ -370,9 +383,9 @@
     });
   }
   </script>
-<script src="./js/data.js?v=5.0.0"></script>
-<script src="./js/audio.js?v=5.0.0"></script>
-<script src="./js/engine.js?v=5.0.0"></script>
-<script src="./js/ui.js?v=5.0.0"></script>
+<script src="./js/data.js?v=5.1.0"></script>
+<script src="./js/audio.js?v=5.1.0"></script>
+<script src="./js/engine.js?v=5.1.0"></script>
+<script src="./js/ui.js?v=5.1.0"></script>
 </body>
 </html>
