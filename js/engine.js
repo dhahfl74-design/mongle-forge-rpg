@@ -237,17 +237,14 @@
             const src = o && o.data ? o.data : o;
             if (src) {
               S = defaults();
-              S.gold = Math.max(S.gold, num(src.gold, 0));
+              S.gold = Math.max(S.gold + 4000, num(src.gold, 0));
+              S.keys = 15;
               S.stones = Math.max(0, num(src.stones, 0));
-              S.hero.lv = Math.max(1, Math.min(60, num(src.hero && src.hero.level, 1)));
-              const cleared = (src.progress && src.progress.cleared) || {};
-              const maxKey = Object.keys(cleared).sort((a, b) => (G.stageByKey(a) || {}).i - (G.stageByKey(b) || {}).i).pop();
-              const st = maxKey ? G.stageByKey(maxKey) : null;
-              const maxIdx = st ? Math.min(st.i + 1, G.TOTAL_STAGES) : 1;
-              S.progress.maxStage = maxIdx;
-              S.progress.stage = maxIdx;
+              S.hero.lv = Math.max(1, Math.min(40, num(src.hero && src.hero.level, 1)));
+              // 새 상자 루프는 1-1에서 다시 시작한다 (이전 구역 진행은 가져오지 않음)
+              S.progress.maxStage = 1;
+              S.progress.stage = 1;
               S.tutorial.skipped = true;
-              S.hero.lv = Math.max(S.hero.lv, 1);
               migrated = true;
             }
           } catch (e) {}
@@ -878,6 +875,25 @@
     requestAnimationFrame(loop);
   }
   G.startLoop = function () { requestAnimationFrame(loop); };
+
+  /* 지금 전투력으로 감당할 수 없는 구역에 있으면 가장 가까운 구역으로 재정비 */
+  G.autoDemote = function () {
+    if (S.progress.stage <= 1) return false;
+    const st = G.stageByIndex(S.progress.stage);
+    const power = G.stats().power;
+    const rec = G.BAL.recPower(st.scale, st.i);
+    if (rec <= power * 2.2) return false;
+    let target = 1;
+    for (let i = S.progress.stage - 1; i >= 1; i--) {
+      const c = G.stageByIndex(i);
+      if (G.BAL.recPower(c.scale, c.i) <= power * 1.1) { target = i; break; }
+    }
+    S.progress.stage = target;
+    S.progress.world = G.stageByIndex(target).world;
+    emit("toast", { kind: "reward", text: "구역 재정비 · " + G.stageByIndex(target).label + "부터 다시 도전합니다" });
+    G.saveSoon();
+    return true;
+  };
 
   /* ---------------- 초기화 ---------------- */
   G.init = function () {
