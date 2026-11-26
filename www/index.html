@@ -1,482 +1,365 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <meta name="theme-color" content="#0b0910" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="심연의 대장간" />
-  <meta name="description" content="저주받은 성검을 벼려 15개 황폐한 세계를 베어 넘기는 다크 판타지 강화·사냥 RPG." />
-  <link rel="manifest" href="./manifest.json" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Song+Myeong&family=Gothic+A1:wght@400;700;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="./css/style.css" />
-  <title>심연의 대장간: 저주받은 성검</title>
-  <script>
-    window.__APP_ERRORS = [];
-    window.addEventListener("error", function (e) {
-      window.__APP_ERRORS.push({ message: e.message, at: (e.filename || "") + ":" + e.lineno });
-    });
-    window.addEventListener("unhandledrejection", function (e) {
-      window.__APP_ERRORS.push({ message: String(e.reason) });
-    });
-  </script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#07060b" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="심연의 대장간" />
+<meta name="description" content="상자를 깨고, 장비를 벼리고, 72종 장비를 수집하는 다크 판타지 강화·수집·상자깡 RPG." />
+<link rel="manifest" href="./manifest.json" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Gothic+A1:wght@400;500;700;800;900&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="./css/style.css" />
+<link rel="preload" as="image" href="./assets/items/chest-ornate.webp" />
+<title>심연의 대장간 · 강화 수집 상자깡</title>
+<script>
+  window.__APP_ERRORS = [];
+  window.addEventListener("error", function (e) {
+    window.__APP_ERRORS.push({ message: e.message, at: (e.filename || "") + ":" + e.lineno });
+  });
+  window.addEventListener("unhandledrejection", function (e) {
+    window.__APP_ERRORS.push({ message: String(e.reason) });
+  });
+</script>
 </head>
 <body>
-  <div class="app-shell" id="appShell">
-    <!-- ===================== 상단 바 ===================== -->
-    <header class="topbar">
-      <div class="brand">
-        <div class="brand-mark" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 1.6l2.2 3.4v10.6H9.8V5z" fill="#f0d792"/><path d="M12 3.2v11.4" stroke="#7a5f22" stroke-width="0.7"/><path d="M6.2 15.4h11.6v2.1H6.2z" fill="#c9a24a"/><path d="M11 17.6h2v4.1h-2z" fill="#6d4f32"/><circle cx="12" cy="22.2" r="1.5" fill="#e0404f"/></svg>
-        </div>
-        <div class="brand-copy">
-          <div class="brand-title">심연의 대장간</div>
-          <div class="brand-sub">저주받은 성검</div>
-        </div>
-      </div>
 
-      <div class="wallet">
-        <div class="coin is-gold" id="coinGold">
-          <span class="coin-ico">🪙</span><span class="coin-name">골드</span><b id="goldTop">1,200</b>
-        </div>
-        <div class="coin is-stone" id="coinStone">
-          <span class="coin-ico">💠</span><span class="coin-name">룬석</span><b id="stoneTop">3</b>
-        </div>
-        <div class="coin is-frag" id="coinFrag">
-          <span class="coin-ico">🩸</span><span class="coin-name">유물 파편</span><b id="fragTop">0</b>
-        </div>
-      </div>
+<svg class="sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="i-sword" viewBox="0 0 24 24"><path d="M19.6 2.4h2v2L11 15l-2-2L19.6 2.4zM8.2 13.9l1.9 1.9-1.4 1.4 2.2 2.2-1.4 1.4-2.2-2.2-1.6 1.6-1.4-1.4 1.6-1.6-2.2-2.2L6.6 8l1.6 1.6 1.4-1.4 1.9 1.9-1.4 1.4-1.9-1.9-1.4 1.4 2.2 2.2-1.4 1.4z" fill="currentColor"/></symbol>
+  <symbol id="i-helm" viewBox="0 0 24 24"><path d="M12 2.4c4.7 0 7.7 3.2 7.7 7.6v2.6H16l-1.2 3.3H9.2L8 12.6H4.3V10c0-4.4 3-7.6 7.7-7.6zm0 2.4c-3 0-4.9 2-5.2 5.4h10.4C16.9 6.8 15 4.8 12 4.8zM9.4 18.2h5.2v3.4H9.4v-3.4z" fill="currentColor"/></symbol>
+  <symbol id="i-armor" viewBox="0 0 24 24"><path d="M12 1.8l8.4 3.4v6.2c0 5.2-3.4 9.7-8.4 11-5-1.3-8.4-5.8-8.4-11V5.2L12 1.8zm0 2.5L6 6.6v4.8c0 3.9 2.3 7.3 6 8.5 3.7-1.2 6-4.6 6-8.5V6.6l-6-2.3z" fill="currentColor"/></symbol>
+  <symbol id="i-ring" viewBox="0 0 24 24"><path d="M12 2l3.6 4h-7.2L12 2zM12 7.2c3.9 0 7 2.7 7 6.1s-3.1 6.1-7 6.1-7-2.7-7-6.1 3.1-6.1 7-6.1zm0 2.2c-2.7 0-4.8 1.7-4.8 3.9s2.1 3.9 4.8 3.9 4.8-1.7 4.8-3.9-2.1-3.9-4.8-3.9z" fill="currentColor"/></symbol>
+  <symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 6.4l1.5 3.3 3.6.4-2.7 2.4.8 3.5-3.2-1.8-3.2 1.8.8-3.5L6.9 10l3.6-.4L12 6.4z" fill="currentColor"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><path d="M15.4 2a6 6 0 00-5.6 8.2L2 18v4h4l1.4-1.4V19h1.6v-1.6h1.6v-1.6l1.2-1.2A6 6 0 1015.4 2zm1.2 4.4a1.8 1.8 0 110 3.6 1.8 1.8 0 010-3.6z" fill="currentColor"/></symbol>
+  <symbol id="i-gem" viewBox="0 0 24 24"><path d="M7 2h10l4 6-9 14L3 8l4-6zm.8 2L5.6 7.4h12.8L16.2 4H7.8zM12 15.8L15.6 8H8.4L12 15.8z" fill="currentColor"/></symbol>
+  <symbol id="i-hammer" viewBox="0 0 24 24"><path d="M14.5 2l7.5 7.5-3 3-2-2-2 2-2-2-6.5 6.5L3 21l-2-2 4-4 6.5-6.5-2-2 2-2-2-2 3-3z" fill="currentColor"/></symbol>
+  <symbol id="i-chest" viewBox="0 0 24 24"><path d="M3 10a5 5 0 015-5h8a5 5 0 015 5v11H3V10zm2 2v7h14v-7H5zm2-5a3 3 0 00-3 3h16a3 3 0 00-3-3H7zm4 5h2v4h-2v-4z" fill="currentColor"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M6 2.6h9.6c1.4 0 2.4 1 2.4 2.4v15.4l-7-3.1-7 3.1V5c0-1.4 1-2.4 2.4-2.4H6zm1.4 2.2c-.3 0-.5.2-.5.5v12l4.3-1.9V4.8H7.4zm5.8 10.6l4.3 1.9v-12c0-.3-.2-.5-.5-.5h-3.8v10.6z" fill="currentColor"/></symbol>
+  <symbol id="i-orb" viewBox="0 0 24 24"><circle cx="12" cy="11" r="6.4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2.2L14 6l-2 1-2-1 2-3.8zM4 17.5l3.6-1.4.8 2.2-2.2 3-2.2-3.8zm16 0l-2.2 3.8-2.2-3 .8-2.2L20 17.5z" fill="currentColor"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2" fill="currentColor"/><circle cx="12" cy="12" r="2" fill="currentColor"/><circle cx="19" cy="12" r="2" fill="currentColor"/></symbol>
+  <symbol id="i-sound" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4V9zm12.5-2.2a6.5 6.5 0 010 10.4l-1.3-1.6a4.6 4.6 0 000-7.2l1.3-1.6z" fill="currentColor"/></symbol>
+  <symbol id="i-mute" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4V9zm12 1.2l1.6-1.6 1.4 1.4-1.6 1.6 1.6 1.6-1.4 1.4-1.6-1.6-1.6 1.6-1.4-1.4 1.6-1.6-1.6-1.6 1.4-1.4 1.6 1.6z" fill="currentColor"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6.4 4.9L12 10.5l5.6-5.6 1.5 1.5-5.6 5.6 5.6 5.6-1.5 1.5-5.6-5.6-5.6 5.6-1.5-1.5 5.6-5.6-5.6-5.6 1.5-1.5z" fill="currentColor"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M9 4.4L16.6 12 9 19.6l-1.6-1.6L13.4 12 7.4 6l1.6-1.6z" fill="currentColor"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><path d="M6 10V8a6 6 0 1112 0v2h2v12H4V10h2zm2 0h8V8a4 4 0 10-8 0v2zm2 3v6h4v-6H10z" fill="currentColor"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 2l2.9 6.2 6.8.9-5 4.7 1.3 6.8L12 17.4 6 20.6l1.3-6.8-5-4.7 6.8-.9L12 2z" fill="currentColor"/></symbol>
+</svg>
 
-      <div class="top-right">
-        <div class="top-hero">
-          <span class="top-hero-ico" aria-hidden="true">🗡️</span>
-          <div class="top-hero-meta">
-            <span class="top-hero-lv" id="topHeroLv">Lv.1</span>
-            <div class="bar exp sm"><i id="topExpFill"></i></div>
-          </div>
-        </div>
-        <button class="icon-btn" id="soundBtn" aria-label="소리 켜기/끄기" title="소리">🔊</button>
-      </div>
-    </header>
+<div class="app" id="app">
 
-    <!-- 설치 배너 -->
-    <div class="install-banner" id="installBanner">
-      <span>📱 홈 화면에 추가하면 심연에서도 오프라인으로 사냥할 수 있습니다.</span>
-      <button id="installBtn">설치</button>
-      <button class="install-close" id="installClose" aria-label="닫기">✕</button>
+  <!-- ================= HUD ================= -->
+  <header class="hud">
+    <div class="brand">
+      <div class="brand-mark"><svg><use href="#i-sword"/></svg></div>
+      <div class="brand-copy">
+        <b>심연의 대장간</b>
+        <span>강화 · 수집 · 상자깡</span>
+      </div>
     </div>
 
-    <!-- ===================== 본문 ===================== -->
-    <main class="viewport">
+    <div class="wallet">
+      <div class="w-item gold"><svg class="w-ico"><use href="#i-coin"/></svg><b id="goldVal">0</b></div>
+      <div class="w-item key"><svg class="w-ico"><use href="#i-key"/></svg><b id="keyVal">0</b></div>
+      <div class="w-item stone"><svg class="w-ico"><use href="#i-gem"/></svg><b id="stoneVal">0</b></div>
+      <div class="w-item frag"><svg class="w-ico"><use href="#i-orb"/></svg><b id="fragVal">0</b></div>
+    </div>
 
-      <!-- ---------------- 사냥 ---------------- -->
-      <section class="tab-page active" id="tab-hunt">
-        <div class="hero-card">
-          <div class="hero-portrait" id="heroPortrait"></div>
-          <div class="hero-info">
-            <div class="hero-line">
-              <b>서약자 <span id="heroLvText">Lv.1</span></b>
-              <span class="hero-title" id="heroTitle">잿더미의 생존자</span>
-              <span class="hero-badge hidden" id="heroBadge">🎖 심연의 서약자</span>
+    <button class="icon-btn" id="soundBtn" aria-label="소리 켜고 끄기"><svg><use href="#i-sound"/></svg></button>
+  </header>
+
+  <!-- ================= 자동 전장 ================= -->
+  <section class="stagebar" id="stageBar">
+    <div class="sb-top">
+      <div class="sb-stage">
+        <span class="sb-flag" id="sbWorldEmoji">🌫️</span>
+        <b id="sbLabel">1-1</b>
+        <span class="sb-name" id="sbName">잿빛 황야</span>
+      </div>
+      <div class="sb-pips" id="sbPips"></div>
+      <button class="boss-btn" id="bossBtn"><span>👑 보스 도전</span></button>
+      <button class="mini-btn" id="stagePickBtn">구역<svg><use href="#i-arrow"/></svg></button>
+    </div>
+
+    <div class="arena">
+      <div class="fighter hero-side">
+        <div class="portrait"><img src="./assets/hero.png" alt="서약자" /></div>
+        <div class="fmeta">
+          <div class="fline"><b>서약자</b><span class="flv" id="heroLv">Lv.1</span></div>
+          <div class="hpbar hero"><i id="heroHpFill"></i><span id="heroHpText">300 / 300</span></div>
+          <div class="hero-exp"><i id="heroExpFill"></i></div>
+        </div>
+      </div>
+
+      <div class="arena-mid">
+        <div class="vs-mark">VS</div>
+        <div class="combo-chip" id="comboChip">콤보 0</div>
+      </div>
+
+      <div class="fighter enemy-side" id="enemySide">
+        <div class="portrait"><img id="enemyImg" src="./assets/monster-undead.png" alt="적" /><div class="enemy-glow" id="enemyGlow"></div></div>
+        <div class="fmeta">
+          <div class="fline"><b id="enemyName">부패한 점액</b><span class="fboss" id="enemyTag">일반</span></div>
+          <div class="hpbar enemy"><i id="enemyHpFill"></i><span id="enemyHpText">0 / 0</span></div>
+        </div>
+      </div>
+
+      <div class="dmg-layer" id="dmgLayer"></div>
+      <div class="hit-flash" id="hitFlash"></div>
+      <div class="down-banner" id="downBanner">쓰러졌습니다 · 재정비 중</div>
+    </div>
+
+    <div class="sb-bottom">
+      <div class="power-line">전투력 <b id="powerVal">0</b> <span id="powerRec">/ 권장 0</span></div>
+      <div class="drop-line" id="dropLine"><span class="dl-idle">사냥 중…</span></div>
+    </div>
+  </section>
+
+  <!-- ================= 본문 ================= -->
+  <main class="content" id="content">
+
+    <!-- ---------- 상자 ---------- -->
+    <section class="page active" id="page-chest">
+      <div class="chest-hero">
+        <div class="chest-bg"></div>
+        <div class="chest-vignette"></div>
+        <div class="chest-scene" id="chestScene">
+          <div class="beam" id="beam"></div>
+          <div class="floor-glow"></div>
+          <div class="chest" id="chestArt">
+            <div class="chest-halo"></div>
+            <img class="chest-img" src="./assets/items/chest-ornate.webp" alt="심연의 상자" draggable="false" />
+            <div class="chest-shine"></div>
+          </div>
+          <div class="sparks" id="sparks"></div>
+          <div class="rise-cards" id="riseCards"></div>
+        </div>
+
+        <div class="pull-row">
+          <button class="pull-btn" id="pullBtn">
+            <span class="pb-glow"></span>
+            <span class="pb-main">상자 열기</span>
+            <span class="pb-cost"><svg><use href="#i-key"/></svg> 1</span>
+          </button>
+          <button class="pull-btn x10" id="pull10Btn">
+            <span class="pb-main">10연 개봉</span>
+            <span class="pb-cost"><svg><use href="#i-key"/></svg> 10</span>
+          </button>
+        </div>
+
+        <div class="chest-tools">
+          <label class="switch-line" for="autoOpen"><span>자동 개봉</span><input type="checkbox" id="autoOpen" /><i class="sw"></i></label>
+          <label class="switch-line" for="autoEquip"><span>자동 장착</span><input type="checkbox" id="autoEquip" /><i class="sw"></i></label>
+          <label class="switch-line" for="autoSalvage"><span>자동 분해</span>
+            <select id="autoSalvage">
+              <option value="none">사용 안 함</option>
+              <option value="normal">일반 미만</option>
+              <option value="uncommon">고급 미만</option>
+              <option value="rare">희귀 미만</option>
+              <option value="epic">영웅 미만</option>
+              <option value="legend">전설 미만</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div class="card chest-level-card">
+        <div class="card-head">
+          <div class="ch-title"><span class="ch-ico">🎚️</span><div><b>상자 Lv.<span id="chestLv">1</span></b><span>레벨이 오르면 고등급 확률이 상승합니다</span></div></div>
+          <button class="btn btn-gold sm" id="chestUpBtn">레벨업 <em id="chestUpCost">1,400 G</em></button>
+        </div>
+        <div class="rate-list" id="rateList"></div>
+      </div>
+
+      <div class="card recent-card">
+        <div class="card-head"><div class="ch-title"><span class="ch-ico">🧾</span><div><b>최근 개봉</b><span>최근 8개</span></div></div>
+          <button class="btn btn-ghost sm" id="recentClear">비우기</button>
+        </div>
+        <div class="recent-list" id="recentList"><div class="empty-line">아직 깐 상자가 없습니다. 첫 상자를 열어보세요.</div></div>
+      </div>
+    </section>
+
+    <!-- ---------- 모루 ---------- -->
+    <section class="page" id="page-forge">
+      <div class="slots-grid" id="slotsGrid"></div>
+
+      <div class="card forge-card">
+        <div class="card-head">
+          <div class="ch-title"><span class="ch-ico">⚒</span><div><b>강화 모루</b><span>모루 위 장비만 강화됩니다</span></div></div>
+          <button class="btn btn-ghost sm" id="forgeClear">모루 비우기</button>
+        </div>
+
+        <div class="forge-body">
+          <div class="forge-visual" id="forgeVisual">
+            <div class="fv-ring"></div>
+            <div class="fv-icon" id="fvIcon"><svg><use href="#i-sword"/></svg></div>
+            <div class="fv-lv" id="fvLv">+0</div>
+            <div class="fv-shine"></div>
+          </div>
+          <div class="forge-info">
+            <div class="fi-name" id="fiName">장비를 선택하세요</div>
+            <div class="fi-sub"><span class="rar-tag" id="fiRar">—</span><span id="fiSlot">—</span></div>
+            <div class="fi-atk">공격력 <b id="fiAtk">0</b></div>
+            <div class="fi-subs" id="fiSubs"></div>
+            <div class="fi-diff" id="fiDiff"></div>
+            <div class="fi-actions">
+              <button class="btn btn-gold" id="equipBtn">장착하기</button>
+              <button class="btn btn-ghost sm" id="salvageBtn">분해</button>
             </div>
-            <div class="bar hp big" id="heroHpBar"><i id="heroHpFill"></i><span id="heroHpText">130 / 130</span></div>
-            <div class="stat-chips">
-              <span class="chip rose">⚔ <b id="statAtk">10</b></span>
-              <span class="chip gold">🎯 <b id="statCrit">8%</b></span>
-              <span class="chip lav">💥 <b id="statCritDmg">175%</b></span>
-              <span class="chip mint">🪙 <b id="statExpBonus">+0%</b></span>
-            </div>
-            <div class="bar exp" id="heroExpBar"><i id="heroExpFill"></i></div>
-            <div class="exp-text" id="heroExpText">EXP 0 / 35</div>
           </div>
         </div>
 
-        <!-- 원정 구역 선택 -->
-        <div id="stageListView">
-          <div class="section-head">
-            <h2>원정 구역</h2>
-            <p id="stageHint">황폐한 세계 중 하나를 골라 사냥합니다</p>
+        <div class="enh-panel">
+          <div class="rate-row">
+            <div class="rate-box ok"><span>성공</span><b id="eSucc">0%</b></div>
+            <div class="rate-box warn"><span>하락</span><b id="eDown">0%</b></div>
+            <div class="rate-box bad"><span>파괴</span><b id="eBreak">0%</b></div>
+            <div class="rate-box cost"><span>비용</span><b id="eCost">0 G</b></div>
           </div>
-          <div class="world-strip" id="worldStrip"></div>
-          <div class="world-info" id="worldInfo"></div>
-          <div class="stage-grid" id="stageGrid"></div>
-          <div class="stage-legend">
-            <span>⭐ 정복</span><span>👑 지배자의 방</span><span>🔒 봉인</span>
+
+          <div class="pity">
+            <div class="pity-head"><span>🌑 장인의 원한</span><b id="pityVal">0%</b></div>
+            <div class="pity-bar"><i id="pityFill"></i></div>
+            <div class="pity-note" id="pityNote">100%가 되면 다음 강화는 확정 성공</div>
           </div>
+
+          <div class="seal-row" id="sealRow">
+            <div class="seal-copy"><b>🛡 봉인 부적</b><span id="sealInfo">+10강부터 파괴를 1회 막습니다 · 보유 0</span></div>
+            <div class="seal-actions">
+              <button class="btn btn-ghost sm" id="sealBuy">+1 (5,000 G)</button>
+              <label class="switch-line mini" for="protectToggle"><span>사용</span><input type="checkbox" id="protectToggle" /><i class="sw"></i></label>
+            </div>
+          </div>
+
+          <button class="enhance-btn" id="enhanceBtn">
+            <span class="eb-ico"><svg><use href="#i-hammer"/></svg></span>
+            <span class="eb-txt">망치질</span>
+            <span class="eb-sub" id="enhanceBtnSub">비용 130 G</span>
+          </button>
         </div>
+      </div>
 
-        <!-- 다음 목표 · 성장 요약 -->
-        <div class="journey-card" id="journeyCard">
-          <div class="jc-head">
-            <b>다음 원정</b>
-            <span id="jcSub">저주를 한 겹 벗겨냅니다</span>
-          </div>
-          <div class="jc-next" id="jcNext">
-            <div class="jc-emoji" id="jcEmoji">🌑</div>
-            <div class="jc-copy">
-              <b id="jcName">1-2 잿빛 황야</b>
-              <span id="jcDesc">권장 공격력 12 · 잊혀진 전리품</span>
-            </div>
-            <button class="btn btn-primary btn-sm" id="jcGo">도전</button>
-          </div>
-          <div class="jc-stats">
-            <span>⚒ <b id="jcWeapon">+0</b></span>
-            <span>🗡 <b id="jcHero">Lv.1</b></span>
-            <span>🔮 <b id="jcRelics">0</b></span>
-            <span>📖 <b id="jcCodex">0/45</b></span>
-          </div>
-          <div class="jc-log" id="jcLog"></div>
-        </div>
-
-        <!-- 스킬 성장 -->
-        <div class="skill-card" id="skillCard">
-          <div class="section-head">
-            <h2>금지된 기술</h2>
-            <p>룬석으로 기술을 각성합니다</p>
-          </div>
-          <div class="skill-list" id="skillList"></div>
-        </div>
-
-        <!-- 전투 (캔버스 아레나 · 전체 화면) -->
-        <div id="battleView" class="battle-wrap hidden">
-          <div class="battle-scene v4" id="battleScene">
-            <canvas id="arenaCanvas" class="arena-canvas" aria-label="전투 아레나"></canvas>
-
-            <div class="battle-top">
-              <button class="mini-btn retreat" id="fleeBtn">⟵ 퇴각</button>
-              <div class="battle-stage" id="battleStage">1-1 · 잿빛 황야</div>
-              <label class="auto-toggle">
-                <input type="checkbox" id="autoToggle" checked />
-                <span>자동</span>
-              </label>
-            </div>
-
-            <div class="wave-pips" id="wavePips"></div>
-            <div class="combo-chip" id="comboChip">연속 3</div>
-
-            <div class="party-strip" id="partyStrip"></div>
-
-            <button class="ult-btn" id="ultBtn" aria-label="파티 궁극기">
-              <span class="ult-ico">✦</span>
-              <em class="ult-txt">궁극기</em>
-              <i class="ult-fill" id="ultFill"></i>
-              <b class="ult-pct" id="ultPct">0%</b>
-            </button>
-
-            <div class="move-pad" id="movePad" aria-label="이동 조이스틱">
-              <div class="mp-knob" id="mpKnob"></div>
-            </div>
-            <button class="dash-btn" id="dashBtn" aria-label="회피 대시"><span class="db-ico">»</span><em class="db-txt">대시</em><i></i></button>
-            <div class="scene-vignette" id="sceneVignette"></div>
-          </div>
-
-          <!-- 보스 패턴 경고 -->
-          <div class="pattern-panel hidden" id="patternPanel">
-            <div class="pp-head">
-              <span class="pp-icon" id="ppIcon">💥</span>
-              <div class="pp-copy">
-                <b id="ppTitle">강타 준비</b>
-                <span id="ppHint">방어로 피해를 줄입니다</span>
-              </div>
-              <span class="pp-timer" id="ppTimer">2.4</span>
-            </div>
-            <div class="bar pp-bar"><i id="ppFill"></i></div>
-          </div>
-
-          <!-- 스킬 & 액션 컨트롤 바 -->
-          <div class="control-bar" id="controlBar">
-            <div class="ctl-main">
-              <button class="ctl-attack" id="attackBtn" aria-label="공격">
-                <span class="ca-ico">⚔</span>
-                <span class="ca-txt">공격</span>
-              </button>
-              <div class="skill-bar" id="skillBar"></div>
-            </div>
-            <div class="ctl-react" id="reactRow">
-              <button class="react-btn" data-react="guard" id="reactGuard"><span class="rb-ico">🛡</span><span class="rb-txt">방어</span></button>
-              <button class="react-btn" data-react="dodge" id="reactDodge"><span class="rb-ico">🌀</span><span class="rb-txt">회피</span></button>
-              <button class="react-btn" data-react="counter" id="reactCounter"><span class="rb-ico">⚡</span><span class="rb-txt">카운터</span></button>
-            </div>
-          </div>
-
-          <div class="battle-info" id="battleInfo">
-            <span>⚒ <b id="biWeapon">+0</b></span>
-            <span>⚔ <b id="biAtk">10</b></span>
-            <span>🎯 <b id="biCrit">8%</b></span>
-            <span class="bi-tip">조이스틱/WASD 이동 · Space 광역 베기 · Shift 대시 · 1·2·3 기술 · 탭으로 리더 교체</span>
-          </div>
-        </div>
-      </section>
-
-      <!-- ---------------- 3인 파티 ---------------- -->
-      <section class="tab-page" id="tab-party">
-        <div class="party-head">
-          <div class="ph-ico">👥</div>
-          <div class="ph-copy">
-            <b>3인 파티</b>
-            <span>동료가 함께 싸웁니다 · 리더를 바꾸면 직접 조종합니다</span>
-          </div>
-          <span class="chip gold">🗡 <b id="partyLeadName">서약자</b></span>
-        </div>
-        <div class="party-list" id="partyList"></div>
-        <div class="tip-box" id="partyTip">💡 동료는 스스로 몹을 몰고 기술을 씁니다. 파티 칸을 누르면 그 영웅으로 조종권이 넘어갑니다.</div>
-      </section>
-
-      <!-- ---------------- 대장간 ---------------- -->
-      <section class="tab-page" id="tab-forge">
-        <!-- 장착 슬롯 · 강화 슬롯 -->
-        <div class="slot-board">
-          <div class="slot-card equipped">
-            <div class="slot-head"><span class="slot-tag">🗡 현재 장착</span><span class="slot-who">사냥 사용</span></div>
-            <div class="slot-lv" id="equippedLv">+0</div>
-            <div class="slot-name" id="equippedName">녹슨 파편검</div>
-            <div class="slot-atk" id="equippedAtk">공격력 10</div>
-          </div>
-          <div class="slot-arrow" aria-hidden="true">⇄</div>
-          <div class="slot-card forge">
-            <div class="slot-head"><span class="slot-tag">⚒ 강화 슬롯</span><span class="slot-who">모루 위</span></div>
-            <div class="slot-lv" id="forgeSlotLv">+0</div>
-            <div class="slot-name" id="forgeSlotName">녹슨 파편검</div>
-            <div class="slot-atk" id="forgeSlotAtk">공격력 10</div>
-          </div>
-        </div>
-        <button class="btn btn-lav equip-btn" id="equipBtn">⚔ 강화 슬롯 검 장착하기</button>
-        <div class="equip-note" id="equipNote">장착하면 두 검이 자리를 바꿉니다. 강화 중 검이 부서져도 장착한 검은 그대로 남습니다.</div>
-
-        <div class="forge-card">
-          <div class="forge-toast" id="forgeToast">강화 성공</div>
-          <div class="forge-head">
-            <div>
-              <div class="forge-lv" id="forgeLv">+0</div>
-              <div class="forge-name" id="forgeName">녹슨 파편검</div>
-              <div class="forge-atk" id="forgeAtk">무기 공격력 10</div>
-              <div class="star-row" id="starRow"></div>
-            </div>
-            <div class="sell-tag">
-              <span>매각가</span>
-              <b id="sellPrice">120 G</b>
-            </div>
-          </div>
-
-          <div class="forge-visual" id="forgeVisual"></div>
-
-          <div class="rate-grid">
-            <div class="rate-box good"><div class="k">성공</div><div class="v" id="rateSuccess">100%</div></div>
-            <div class="rate-box warn"><div class="k">하락</div><div class="v" id="rateDown">0%</div></div>
-            <div class="rate-box bad"><div class="k">파괴</div><div class="v" id="rateBreak">0%</div></div>
-          </div>
-          <div class="rate-note" id="rateNote">실패해도 단계는 유지됩니다</div>
-
-          <div class="pity-block">
-            <div class="pity-head">
-              <span>🌑 장인의 원한 <span class="pity-hint">100%면 확정 성공</span></span>
-              <span class="pity-val" id="pityText">0%</span>
-            </div>
-            <div class="bar pity"><i id="pityFill"></i></div>
-          </div>
-
-          <div class="protect-row off" id="protectRow">
-            <div class="protect-copy">
-              <b>🛡 봉인 부적</b>
-              <span id="protectCost">+10강부터 사용할 수 있습니다</span>
-            </div>
-            <label class="switch">
-              <input type="checkbox" id="protectToggle" />
-              <span class="track"></span>
-            </label>
-          </div>
-
-          <div class="enhance-row">
-            <button class="btn btn-primary enhance-btn" id="enhanceBtn">
-              <span id="enhanceMain">⚒ 망치질</span>
-              <span class="sub" id="enhanceCost">150 G</span>
-            </button>
-            <button class="btn btn-mint stack" id="sellBtn">
-              <span>💰 매각</span>
-              <span class="sub" id="sellBtnSub">+120 G</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="mine-card">
-          <div class="mine-ico">⛏️</div>
-          <div class="mine-copy">
-            <b>잿가루 광맥</b>
-            <span id="mineInfo">클릭 +40 G · 자동 +0 G/초</span>
-          </div>
-          <button class="btn btn-sun btn-sm" id="mineBtn">채굴</button>
-        </div>
-
-        <div class="section-head">
-          <h2>대장간 연구</h2>
-          <p>골드로 영구 각성</p>
-        </div>
+      <div class="card research-card">
+        <div class="card-head"><div class="ch-title"><span class="ch-ico">📜</span><div><b>대장간 연구</b><span>골드로 영구 각성</span></div></div></div>
         <div class="research-list" id="researchList"></div>
-
-        <div class="section-head">
-          <h2>대장간 기록</h2>
-          <p>최근 기록</p>
-        </div>
-        <div class="log-box" id="logBox"></div>
-      </section>
-
-      <!-- ---------------- 유물 ---------------- -->
-      <section class="tab-page" id="tab-relic">
-        <div class="relic-head">
-          <div class="rh-ico">🔮</div>
-          <div class="rh-copy">
-            <b>심연의 유물</b>
-            <span>지배자가 떨어뜨린 파편으로 봉인을 깹니다</span>
-          </div>
-          <span class="chip lav">🩸 <b id="fragCount">0</b></span>
-        </div>
-        <div class="relic-list" id="relicList"></div>
-        <div class="tip-box" id="relicTip">💡 유물 효과는 영구적입니다. 사냥이 버거우면 공격력·체력 유물부터 각성하세요.</div>
-      </section>
-
-      <!-- ---------------- 도감 · 설정 ---------------- -->
-      <section class="tab-page" id="tab-codex">
-        <div class="seg" id="codexSeg">
-          <button data-panel="achv" class="active">🏆 업적<span class="badge" id="achvBadge" style="display:none">0</span></button>
-          <button data-panel="book">📖 도감</button>
-          <button data-panel="settings">⚙ 설정</button>
-        </div>
-
-        <div class="panel active" id="panel-achv">
-          <div class="achv-summary">
-            <div class="as-ico">🏆</div>
-            <div>
-              <b>업적 <span id="achvDone">0</span> / <span id="achvTotal">23</span></b>
-              <p id="achvSummaryText">수령할 업적이 있습니다.</p>
-            </div>
-          </div>
-          <div class="achv-list" id="achvList"></div>
-        </div>
-
-        <div class="panel" id="panel-book">
-          <div class="codex-progress">
-            <div class="bar exp" style="flex:1;height:11px;"><i id="codexFill"></i></div>
-            <span class="chip mint">📖 <b id="codexCount">0 / 45</b></span>
-          </div>
-          <div class="codex-grid" id="codexGrid"></div>
-        </div>
-
-        <div class="panel" id="panel-settings">
-          <div class="setting-row">
-            <div class="sr-copy"><b>🔊 소리</b><p>효과음을 켜고 끕니다</p></div>
-            <label class="switch"><input type="checkbox" id="soundToggle" checked /><span class="track"></span></label>
-          </div>
-          <div class="setting-row">
-            <div class="sr-copy"><b>⚔ 자동 전투</b><p>전투 중 자동으로 공격합니다</p></div>
-            <label class="switch"><input type="checkbox" id="autoToggleSetting" checked /><span class="track"></span></label>
-          </div>
-          <div class="setting-row">
-            <div class="sr-copy"><b>📳 진동</b><p>치명타와 강화에 손맛을 더합니다</p></div>
-            <label class="switch"><input type="checkbox" id="hapticsToggle" checked /><span class="track"></span></label>
-          </div>
-          <div class="setting-row">
-            <div class="sr-copy"><b>➡ 다음 구역으로 자동 진군</b><p>정복하면 바로 다음 구역으로 이동합니다</p></div>
-            <label class="switch"><input type="checkbox" id="autoAdvanceToggle" checked /><span class="track"></span></label>
-          </div>
-          <div class="setting-row">
-            <div class="sr-copy"><b>🔁 같은 구역 반복 사냥</b><p>정복 후 같은 구역을 다시 시작합니다</p></div>
-            <label class="switch"><input type="checkbox" id="autoRepeatToggle" /><span class="track"></span></label>
-          </div>
-
-          <div class="setting-row">
-            <div class="sr-copy"><b>💾 저장 데이터</b><p>자동 저장됩니다. 백업 파일로 옮길 수도 있습니다</p></div>
-            <button class="btn btn-ghost btn-sm" id="exportBtn">내보내기</button>
-          </div>
-          <div class="setting-row">
-            <div class="sr-copy"><b>📥 불러오기</b><p>백업한 저장 파일을 붙여넣거나 올립니다</p></div>
-            <button class="btn btn-ghost btn-sm" id="importBtn">불러오기</button>
-          </div>
-          <div class="setting-row">
-            <div class="sr-copy"><b>🎓 안내 퀘스트</b><p>초보자 4단계 안내와 보상을 다시 봅니다</p></div>
-            <button class="btn btn-ghost btn-sm" id="tutorialReplayBtn">다시 보기</button>
-          </div>
-
-          <div class="setting-row danger">
-            <div class="sr-copy"><b>🧹 처음부터</b><p>모든 진행을 지우고 새로 시작합니다</p></div>
-            <button class="btn btn-danger btn-sm" id="resetBtn">초기화</button>
-          </div>
-
-          <div class="save-info" id="saveInfo">자동 저장 준비 중…</div>
-          <div class="tip-box" id="tipBox">💡 팁: +5강부터 실패하면 단계가 내려가고, +10강부터는 검이 부서질 수 있습니다.</div>
-          <div class="credits">
-            심연의 대장간 v4.0 · 저주받은 성검<br />
-            15개 세계 · 180개 구역 · 3인 파티 · 다수 몹 몰이사냥 · 지배자 15종<br />
-            원작: 전설의 대장장이 — 다크 판타지 강화·사냥 RPG로 재단장 ⚔
-          </div>
-        </div>
-      </section>
-    </main>
-
-    <!-- 다른 탭에 있을 때 보이는 전투 알림 -->
-    <div class="battle-mini" id="battleMini">
-      <span class="bm-dot"></span>
-      <b id="battleMiniStage">전투 중</b>
-      <span id="battleMiniHp">100%</span>
-      <button id="battleMiniGo">전투로</button>
-    </div>
-
-    <!-- 초보자 안내 퀘스트 -->
-    <div class="quest-bar hidden" id="questBar">
-      <div class="qb-main">
-        <div class="qb-top">
-          <span class="qb-step" id="qbStep">1/4</span>
-          <b class="qb-title" id="qbTitle">첫 망치질</b>
-          <button class="qb-mini" id="qbToggle" aria-label="안내 접기">▾</button>
-          <button class="qb-mini" id="qbSkip" aria-label="안내 닫기">✕</button>
-        </div>
-        <div class="qb-goal" id="qbGoal">대장간에서 검을 1회 강화하기</div>
-        <div class="qb-dots" id="qbDots"></div>
       </div>
-      <button class="btn btn-sun qb-claim" id="qbClaim">이동</button>
+    </section>
+
+    <!-- ---------- 도감 ---------- -->
+    <section class="page" id="page-codex">
+      <div class="card codex-card">
+        <div class="codex-hero">
+          <div class="cx-orb"><svg><use href="#i-book"/></svg></div>
+          <div class="cx-copy">
+            <b>장비 도감 <span id="codexCount">0 / 72</span></b>
+            <span>새 장비를 등록할 때마다 영구 공격력 +0.6%</span>
+            <div class="cx-bar"><i id="codexFill"></i></div>
+          </div>
+          <div class="cx-bonus">+<b id="codexBonus">0</b>%</div>
+        </div>
+        <div class="cx-seg" id="cxSeg">
+          <button data-slot="all" class="active">전체</button>
+          <button data-slot="weapon">무기</button>
+          <button data-slot="helm">투구</button>
+          <button data-slot="armor">갑옷</button>
+          <button data-slot="ring">장신구</button>
+        </div>
+        <div class="codex-grid" id="codexGrid"></div>
+      </div>
+
+      <div class="card milestone-card">
+        <div class="card-head"><div class="ch-title"><span class="ch-ico">🏅</span><div><b>도감 완성 보상</b><span>모으면 영구 보너스</span></div></div></div>
+        <div class="milestone-list" id="milestoneList"></div>
+      </div>
+    </section>
+
+    <!-- ---------- 유물 ---------- -->
+    <section class="page" id="page-relic">
+      <div class="card relic-hero">
+        <div class="rh-orb"><svg><use href="#i-orb"/></svg></div>
+        <div class="rh-copy"><b>심연의 유물</b><span>지배자가 떨어뜨린 파편으로 영구 각성</span></div>
+        <div class="rh-frag"><b id="fragCount">0</b><span>파편</span></div>
+      </div>
+      <div class="relic-list" id="relicList"></div>
+      <div class="tip-box">💡 파편은 지배자 격파와 업적에서 얻습니다. 공격력 유물부터 올리면 사냥이 빨라집니다.</div>
+    </section>
+
+    <!-- ---------- 더보기 ---------- -->
+    <section class="page" id="page-more">
+      <div class="card achv-card">
+        <div class="card-head"><div class="ch-title"><span class="ch-ico">🏆</span><div><b>업적</b><span>달성한 업적의 보상을 받으세요</span></div></div>
+          <button class="btn btn-gold sm" id="claimAllBtn">일괄 수령</button></div>
+        <div class="achv-list" id="achvList"></div>
+      </div>
+
+      <div class="card settings-card">
+        <div class="card-head"><div class="ch-title"><span class="ch-ico">⚙</span><div><b>설정</b><span>진행은 자동 저장됩니다</span></div></div></div>
+        <div class="set-row"><div><b>🔊 효과음</b><span>타격·강화·개봉 손맛</span></div><label class="switch-line" for="setSound"><span></span><input type="checkbox" id="setSound" /><i class="sw"></i></label></div>
+        <div class="set-row"><div><b>📳 진동</b><span>치명타와 강화에 진동</span></div><label class="switch-line" for="setHaptics"><span></span><input type="checkbox" id="setHaptics" /><i class="sw"></i></label></div>
+        <div class="set-row"><div><b>🎓 초보자 안내</b><span>4단계 안내를 다시 봅니다</span></div><button class="btn btn-ghost sm" id="tutorialReplay">다시 보기</button></div>
+        <div class="set-row"><div><b>💾 저장 내보내기</b><span>백업 파일로 보관</span></div><button class="btn btn-ghost sm" id="exportBtn">내보내기</button></div>
+        <div class="set-row"><div><b>📥 저장 불러오기</b><span>백업한 텍스트 붙여넣기</span></div><button class="btn btn-ghost sm" id="importBtn">불러오기</button></div>
+        <div class="set-row danger"><div><b>🧹 처음부터</b><span>모든 진행을 지웁니다</span></div><button class="btn btn-danger sm" id="resetBtn">초기화</button></div>
+        <div class="save-info" id="saveInfo">자동 저장 대기 중</div>
+      </div>
+
+      <div class="card tips-card">
+        <div class="card-head"><div class="ch-title"><span class="ch-ico">💡</span><div><b>팁</b><span>알아두면 좋은 것들</span></div></div></div>
+        <ul class="tip-list" id="tipList"></ul>
+      </div>
+
+      <div class="credits">
+        <b>심연의 대장간 v5.0</b><br />
+        15세계 · 180구역 · 장비 72종 · 6등급 · 강화 +20 · 상자 20레벨<br />
+        상자깡 · 강화 · 수집 특화 리부트
+      </div>
+    </section>
+  </main>
+
+  <!-- ================= 네비 ================= -->
+  <nav class="nav">
+    <button class="nav-btn active" data-tab="chest">
+      <span class="nb-ico"><svg><use href="#i-chest"/></svg></span><span class="nb-txt">상자</span>
+      <i class="nb-dot" id="dotChest"></i>
+    </button>
+    <button class="nav-btn" data-tab="forge">
+      <span class="nb-ico"><svg><use href="#i-hammer"/></svg></span><span class="nb-txt">모루</span>
+    </button>
+    <button class="nav-btn" data-tab="codex">
+      <span class="nb-ico"><svg><use href="#i-book"/></svg></span><span class="nb-txt">도감</span>
+      <i class="nb-dot" id="dotCodex"></i>
+    </button>
+    <button class="nav-btn" data-tab="relic">
+      <span class="nb-ico"><svg><use href="#i-orb"/></svg></span><span class="nb-txt">유물</span>
+    </button>
+    <button class="nav-btn" data-tab="more">
+      <span class="nb-ico"><svg><use href="#i-more"/></svg></span><span class="nb-txt">더보기</span>
+      <i class="nb-badge" id="navBadge">0</i>
+    </button>
+  </nav>
+
+  <!-- 안내 퀘스트 -->
+  <div class="quest" id="questBar">
+    <div class="q-ico" id="qIcon">🎁</div>
+    <div class="q-copy">
+      <div class="q-top"><span class="q-step" id="qStep">1/4</span><b id="qTitle">첫 상자깡</b></div>
+      <span class="q-goal" id="qGoal">상자를 1회 열기</span>
     </div>
-
-    <!-- ===================== 바텀 내비 ===================== -->
-    <nav class="bottom-nav">
-      <button class="nav-btn active" data-tab="hunt">
-        <span class="nav-ico">⚔️</span><span class="nav-label">사냥</span>
-      </button>
-      <button class="nav-btn" data-tab="forge">
-        <span class="nav-ico">⚒️</span><span class="nav-label">대장간</span>
-      </button>
-      <button class="nav-btn" data-tab="relic">
-        <span class="nav-ico">🔮</span><span class="nav-label">유물</span>
-      </button>
-      <button class="nav-btn" data-tab="party">
-        <span class="nav-ico">👥</span><span class="nav-label">파티</span>
-      </button>
-      <button class="nav-btn" data-tab="codex">
-        <span class="nav-ico">📖</span><span class="nav-label">도감·설정</span>
-        <span class="nav-badge" id="navBadge"></span>
-      </button>
-    </nav>
+    <button class="btn btn-gold sm" id="qGo">이동</button>
+    <button class="icon-btn sm" id="qSkip" aria-label="안내 닫기"><svg><use href="#i-close"/></svg></button>
   </div>
+</div>
 
-  <!-- 레벨업 연출 -->
-  <div class="levelup-overlay" id="levelupOverlay">
-    <div class="lu-rays"></div>
-    <div class="lu-badge">🌑</div>
-    <div class="lu-text">각성</div>
-    <div class="lu-lv" id="luLv">Lv.2</div>
-  </div>
+<div id="modalRoot"></div>
+<div class="toast-stack" id="toastStack"></div>
+<div class="fx-layer" id="fxLayer"></div>
 
-  <div id="modalRoot"></div>
-  <div class="toast-stack" id="toastStack"></div>
-  <div id="fxLayer"></div>
-
-  <script src="./js/data.js"></script>
-  <script src="./js/sprites.js"></script>
-  <script src="./js/core.js"></script>
-  <script src="./js/arena.js"></script>
-  <script src="./js/vfx.js"></script>
-  <script src="./js/ui.js"></script>
+<script src="./js/data.js"></script>
+<script src="./js/audio.js"></script>
+<script src="./js/engine.js"></script>
+<script src="./js/ui.js"></script>
 </body>
 </html>
