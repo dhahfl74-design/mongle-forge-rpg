@@ -21,6 +21,7 @@
   function enterBattleFocus(boss) {
     document.body.classList.add("battle-focus");
     setTimeout(() => {
+      if (!document.body.classList.contains("battle-focus")) return;
       if (window.VFX) { VFX.resize(); VFX.setBoss(!!boss); VFX.start(); }
     }, 30);
   }
@@ -193,7 +194,7 @@
     const ti = Math.min(titles.length - 1, Math.max(0, currentWorld - 1));
     $("heroTitle").textContent = titles[ti];
 
-    if (force) $("heroPortrait").innerHTML = G.sprites.hero(G.tierOf(), {});
+    if (force) $("heroPortrait").innerHTML = `<img class="portrait-img" src="${G.sprites.ART.hero}" alt="">`;
   }
 
   /* ===============================================================
@@ -255,14 +256,14 @@
     const next = G.STAGES.find((x) => x.index === s.progress.maxStage);
     const relicLv = Object.values(s.relics).reduce((a, r) => a + (r.u ? r.lv : 0), 0);
     if (next) {
-      $("jcEmoji").textContent = next.emoji;
+      $("jcEmoji").innerHTML = `<span class="jc-rune" style="--wc:${worldAccent(next.world)}"><i></i></span>`;
       $("jcName").textContent = `${next.label} ${next.name}${next.isBoss ? " 👑" : ""}`;
       $("jcDesc").textContent = `추천 공격력 ${G.fmt(next.recAtk)} · ${next.isBoss ? "보스방!" : "첫 클리어 보너스"}`;
       $("jcGo").disabled = false;
       $("jcGo").textContent = "도전";
       $("jcSub").textContent = `세계 ${next.world} · ${s.progress.maxStage - 1}/${G.TOTAL_STAGES} 진행`;
     } else {
-      $("jcEmoji").textContent = "👑";
+      $("jcEmoji").innerHTML = `<span class="jc-rune" style="--wc:#f0d792"><i></i></span>`;
       $("jcName").textContent = "모든 세계 정복!";
       $("jcDesc").textContent = "전설의 성검이 완성됐어요";
       $("jcGo").disabled = true;
@@ -282,6 +283,13 @@
     return w;
   }
 
+  /* 세계별 강조 색 (그 세계 지배자의 발광색) */
+  function worldAccent(worldId) {
+    const w = G.worldById(worldId);
+    const boss = w && G.MONSTERS[w.boss];
+    return (boss && boss.color2) || "#c9a24a";
+  }
+
   function renderStagePicker() {
     const s = S();
     const maxWorld = maxUnlockedWorld();
@@ -293,14 +301,14 @@
       const p = G.worldProgress(x.id);
       const cls = [x.id === currentWorld ? "active" : "", p.unlocked ? "" : "locked", p.cleared >= p.total ? "done" : ""].join(" ");
       return `<button class="world-chip ${cls}" data-world="${x.id}">
-        <span class="wc-emoji">${p.unlocked ? x.emoji : "🔒"}</span>
+        <span class="wc-rune" style="--wc:${worldAccent(x.id)}"><i></i></span>
         <span class="wc-id">${x.id}</span>
       </button>`;
     }).join("");
 
     const prog = G.worldProgress(w.id);
     $("worldInfo").innerHTML = `
-      <div class="wi-emoji">${w.emoji}</div>
+      <div class="wi-rune" style="--wc:${worldAccent(w.id)}"><i></i></div>
       <div class="wi-copy">
         <b>${w.id}. ${w.name}</b>
         <span>${prog.unlocked ? w.desc : "이전 세계의 지배자를 베면 열립니다"}</span>
@@ -341,12 +349,16 @@
     battleKey = key;
 
     const scene = $("battleScene");
-    scene.style.background = `linear-gradient(180deg, ${b.stage.sky[0]} 0%, ${b.stage.sky[1]} 100%)`;
+    const tint = $("bfTint");
+    if (tint) {
+      tint.style.background = `linear-gradient(180deg, ${b.stage.sky[0]}77 0%, ${b.stage.sky[1]}bb 58%, #05040acc 100%)`;
+    }
     scene.style.setProperty("--hill1", b.stage.ground);
     scene.style.setProperty("--hill2", b.stage.sky[0]);
     $("battleStage").textContent = `${b.stage.label} · ${b.stage.name}`;
 
-    $("heroSprite").innerHTML = G.sprites.hero(G.tierOf(), {});
+    const tierNow = G.tierOf();
+    $("heroSprite").innerHTML = `<img class="sprite-img hero-img" src="${G.sprites.ART.hero}" alt="" style="--hero-glow:${tierNow.glow.replace(/[\d.]+\)$/, "0.85)")}">`;
     $("autoToggle").checked = !!b.auto;
 
     const deco2 = { 1: "🕯️", 2: "🍄", 3: "🩸", 4: "☁️", 5: "✨", 6: "🦋", 7: "🌘", 8: "🪨", 9: "🕊️", 10: "🏰", 11: "❄️", 12: "🌊", 13: "⏳", 14: "🔥", 15: "👑" };
@@ -365,7 +377,8 @@
     if (!b || !b.enemy) { $("enemySprite").innerHTML = ""; return; }
     const e = b.enemy;
     fy.classList.toggle("boss", !!e.boss);
-    $("enemySprite").innerHTML = G.sprites.monster(e, { boss: e.boss });
+    $("enemySprite").innerHTML = `<img class="sprite-img enemy-img" src="${G.sprites.monsterArt(e, e.boss)}" alt="" draggable="false">`;
+    $("enemySprite").style.setProperty("--tint", G.sprites.monsterTint(e));
     $("enemyName").textContent = e.name + (e.boss ? " 👑" : "");
     $("tapHint").style.display = "";
     if (window.VFX) VFX.setBoss(!!e.boss || !!b.stage.isBoss);
@@ -534,7 +547,8 @@
     ).join("");
 
     if (forgeSwordLevel !== lv) {
-      $("forgeVisual").innerHTML = G.sprites.sword(lv);
+      const t = G.tierOf(lv);
+      $("forgeVisual").innerHTML = `<div class="forge-aura" style="--aura:${t.glow}"></div><img class="forge-sword forge-sword-img" src="${G.sprites.ART.sword}" alt="">`;
       forgeSwordLevel = lv;
     }
 
@@ -628,7 +642,6 @@
     svg.classList.add(cls);
     setTimeout(() => svg.classList.remove(cls), 700);
   }
-
   /* ===============================================================
      유물 탭
      =============================================================== */
@@ -730,7 +743,7 @@
     const known = !!s.codex[id];
     return `<div class="codex-cell ${known ? "" : "unknown"} ${boss ? "box" : ""}">
       ${boss ? `<span class="cx-boss">BOSS</span>` : ""}
-      <div class="cx-sprite">${G.sprites.monster(mon, { boss: boss })}</div>
+      <div class="cx-sprite"><img class="sprite-img cx-img" src="${G.sprites.monsterArt(mon, boss)}" alt="" loading="lazy" style="--tint:${G.sprites.monsterTint(mon)}"></div>
       <div class="cx-name">${known ? mon.name : "???"}</div>
     </div>`;
   }
@@ -1505,6 +1518,12 @@
 
     G.bus.on("battle:victory", (res) => { onVictory(res); });
     G.bus.on("battle:defeat", (res) => { onDefeat(res); });
+    G.bus.on("battle:flee", () => {
+      battleKey = "";
+      exitBattleFocus();
+      renderHunt();
+      renderHeader(false);
+    });
 
     // 보스 패턴
     G.bus.on("battle:pattern", (p) => {

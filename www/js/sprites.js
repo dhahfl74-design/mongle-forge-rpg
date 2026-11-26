@@ -109,10 +109,13 @@
         <ellipse cx="60" cy="112" rx="32" ry="6" fill="rgba(0,0,0,0.55)"/>
         <path d="M60 22 C85 22 99 42 99 65 L99 97 C99 105 84 110 60 110 C36 110 21 105 21 97 L21 65 C21 42 35 22 60 22 Z"
           fill="${c1}" stroke="${c2}" stroke-width="3"/>
-        <path d="M26 50 q34 -14 68 0 l0 14 q-34 -13 -68 0 Z" fill="${c2}" opacity="0.16"/>
-        <path d="M60 30 V104" stroke="${c2}" stroke-width="1.4" opacity="0.35"/>
-        <path d="M34 88 q26 10 52 0" stroke="${c2}" stroke-width="1.4" fill="none" opacity="0.4"/>`;
-    }
+        <ellipse cx="24" cy="56" rx="11" ry="9" fill="#151321" stroke="${c2}" stroke-width="2"/>
+        <ellipse cx="96" cy="56" rx="11" ry="9" fill="#151321" stroke="${c2}" stroke-width="2"/>
+        <path d="M34 44 q26 -10 52 0 l0 12 q-26 -9 -52 0 Z" fill="${c2}" opacity="0.16"/>
+        <path d="M60 32 V104" stroke="${c2}" stroke-width="1.3" opacity="0.3"/>
+        <path d="M40 92 q20 8 40 0" stroke="${c2}" stroke-width="1.3" fill="none" opacity="0.35"/>
+        <rect x="48" y="70" width="24" height="8" rx="3" fill="#0c0a12" stroke="${c2}" stroke-width="1" opacity="0.9"/>`;
+    },
   };
 
   /* ---------- 액세서리 ---------- */
@@ -280,12 +283,22 @@
     const mood = boss ? "angry" : "smile";
     const acc = (ACC[mon.kind] || ACC.blob)(mon);
     const eyeY = mon.kind === "mushroom" ? 72 : 66;
-    const glow = boss ? 12 : 6;
+    const glow = boss ? 9 : 4;
+    let spikes = "";
+    if (boss) {
+      for (let i = 0; i < 11; i++) {
+        const a = (-92 + (i - 5) * 17) * Math.PI / 180;
+        const r1 = 46;
+        const r2 = 56 + (i % 3) * 7;
+        spikes += `<line x1="${(60 + Math.cos(a) * r1).toFixed(1)}" y1="${(66 + Math.sin(a) * r1).toFixed(1)}" x2="${(60 + Math.cos(a) * r2).toFixed(1)}" y2="${(66 + Math.sin(a) * r2).toFixed(1)}" stroke="${mon.color2}" stroke-width="3.4" stroke-linecap="round" opacity="0.38"/>`;
+      }
+    }
     return `
     <svg viewBox="0 0 120 120" class="sprite-svg ${boss ? "sprite-boss" : ""}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      ${boss ? `<circle cx="60" cy="66" r="54" fill="${mon.color2}" opacity="0.07"/>` : ""}
-      <g class="sprite-body" style="filter: drop-shadow(0 0 ${glow}px ${mon.color2}aa) drop-shadow(0 8px 10px rgba(0,0,0,0.6))">
+      ${boss ? `<circle cx="60" cy="66" r="54" fill="${mon.color2}" opacity="0.07"/><g>${spikes}</g>` : ""}
+      <g class="sprite-body" style="filter: drop-shadow(0 0 ${glow}px ${mon.color2}88) drop-shadow(0 8px 10px rgba(0,0,0,0.55))">
         ${bodyFor(mon.kind, mon)}
+        <ellipse cx="60" cy="96" rx="32" ry="15" fill="#000000" opacity="0.18"/>
         ${acc}
         ${eyes(60, eyeY, 13, boss ? 5.2 : 4.6, mood, mon.color2)}
         ${scar(46, eyeY + 16, mon.color2)}
@@ -341,14 +354,14 @@
         <path d="M56 72 h8 M60 68 v8" stroke="#c9a24a" stroke-width="1.6" opacity="0.9"/>
       </g>
       <!-- 저주받은 검 -->
-      <g transform="translate(88 44) rotate(22)" class="hero-blade" style="filter: drop-shadow(0 0 10px ${blade})">
-        <rect x="-4.4" y="-36" width="8.8" height="62" rx="3" fill="url(#heroBladeGrad)" stroke="${blade2}" stroke-width="1.6"/>
-        <path d="M0 -50 l5.4 14 h-10.8 Z" fill="${blade2}"/>
-        <path d="M0 -30 v52" stroke="#ffffff" stroke-width="1.2" opacity="0.5"/>
-        <rect x="-13" y="20" width="26" height="7" rx="3.4" fill="${bolt}" stroke="${blade2}" stroke-width="1.2"/>
-        <rect x="-3" y="27" width="6" height="16" rx="3" fill="#3a2b22"/>
-        <circle cx="0" cy="46" r="4.6" fill="#1a1220" stroke="${blade2}" stroke-width="1.6"/>
-        <circle cx="0" cy="46" r="1.8" fill="#ff3b4e"/>
+      <g transform="translate(90 42) rotate(20)" class="hero-blade" style="filter: drop-shadow(0 0 10px ${blade})">
+        <polygon points="0,-56 7,-40 6,16 -6,16 -7,-40" fill="url(#heroBladeGrad)" stroke="${blade2}" stroke-width="1.5"/>
+        <line x1="-2" y1="-36" x2="-2" y2="12" stroke="#ffffff" stroke-width="1.5" opacity="0.5"/>
+        <line x1="2.4" y1="-32" x2="2.4" y2="10" stroke="${bolt}" stroke-width="1.6" opacity="0.8"/>
+        <rect x="-14" y="14" width="28" height="7" rx="3" fill="${bolt}" stroke="${blade2}" stroke-width="1.2"/>
+        <rect x="-3.6" y="21" width="7.2" height="17" rx="3" fill="#3a2b22" stroke="#5d4a3a" stroke-width="1"/>
+        <circle cx="0" cy="42" r="4.6" fill="#1a1220" stroke="${blade2}" stroke-width="1.6"/>
+        <circle cx="0" cy="42" r="1.7" fill="#ff3b4e"/>
       </g>
       <path d="M96 18 l2 6 l6 2 l-6 2 l-2 6 l-2 -6 l-6 -2 l6 -2 Z" fill="${blade2}" opacity="0.8"/>
       <path d="M18 76 l2 5 l5 2 l-5 2 l-2 5 l-2 -5 l-5 -2 l5 -2 Z" fill="#c9a24a" opacity="0.7"/>
@@ -415,6 +428,48 @@
         <path d="M118 120 l1.6 4 l4 1.6 l-4 1.6 l-1.6 4 l-1.6 -4 l-4 -1.6 l4 -1.6 Z" fill="#ffffff"/>
       </g>` : ""}
     </svg>`;
+  };
+
+  /* ---------- 일러스트 에셋 (생성 아트) ---------- */
+  const ART = {
+    hero: "assets/hero.png",
+    demon: "assets/boss-demon.png",
+    dragon: "assets/boss-dragon.png",
+    knight: "assets/boss-knight.png",
+    undead: "assets/monster-undead.png",
+    fiend: "assets/monster-fiend.png",
+    sword: "assets/sword-mythic.png"
+  };
+  SP.ART = ART;
+
+  function hashHue(id) {
+    let h = 0;
+    for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 360;
+    return h;
+  }
+
+  /* 몬스터 종류 → 일러스트 */
+  SP.monsterArt = function (mon, boss) {
+    const kind = mon.kind;
+    if (boss) {
+      if (kind === "dragon") return ART.dragon;
+      if (kind === "knight") return ART.knight;
+      if (kind === "ghost") return ART.undead;
+      if (kind === "demon") return ART.demon;
+      if (kind === "crowned" || kind === "queen") return ART.knight;
+      if (kind === "whale" || kind === "turtle") return ART.dragon;
+      return ART.demon;
+    }
+    if (kind === "ghost") return ART.undead;
+    return ART.fiend;
+  };
+
+  /* 몬스터별 색 변주 (같은 일러스트도 다르게 보이도록) */
+  SP.monsterTint = function (mon) {
+    const h = hashHue(mon.id || mon.name || "x");
+    const hue = Math.round((h - 180) * 0.55);
+    const sat = 0.9 + ((h % 30) / 100);
+    return `hue-rotate(${hue}deg) saturate(${sat.toFixed(2)})`;
   };
 
   G.sprites = SP;

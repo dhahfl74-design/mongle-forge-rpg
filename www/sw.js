@@ -1,5 +1,5 @@
 /* 몽글 대장간 — 오프라인 캐시 서비스 워커 */
-const CACHE_NAME = "abyss-forge-v3-0-0";
+const CACHE_NAME = "abyss-forge-v3-1-0";
 const ASSETS = [
   "./",
   "./index.html",
@@ -10,6 +10,15 @@ const ASSETS = [
   "./js/vfx.js",
   "./js/ui.js",
   "./manifest.json",
+  "./assets/arena-bg.jpg",
+  "./assets/forge-bg.jpg",
+  "./assets/hero.png",
+  "./assets/boss-demon.png",
+  "./assets/boss-dragon.png",
+  "./assets/boss-knight.png",
+  "./assets/monster-fiend.png",
+  "./assets/monster-undead.png",
+  "./assets/sword-mythic.png",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./icons/icon-maskable-512.png"
