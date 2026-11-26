@@ -1123,7 +1123,7 @@ h1, h2, h3, p { margin: 0; }
   position: relative;
   z-index: 20;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 4px;
   padding: 6px 8px calc(7px + var(--safe-bottom));
   background: rgba(255, 251, 246, 0.96);
@@ -3955,4 +3955,219 @@ body.battle-focus #patternPanel .pp-timer { font-size: 14px; }
     border-right: 1px solid rgba(122, 79, 192, 0.18);
   }
   body.battle-focus #tab-hunt #battleView .arena { width: min(86%, 860px) !important; }
+}
+
+/* =====================================================================
+   v4 — 다수 몹 몰이사냥 · 3인 파티 (캔버스 아레나)
+   ===================================================================== */
+.battle-scene.v4 {
+  background: #06050c;
+  min-height: 190px;
+  touch-action: none;
+}
+.arena-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  z-index: 1;
+  touch-action: none;
+  border-radius: inherit;
+}
+.battle-scene.v4 .battle-top { z-index: 9; }
+.battle-scene.v4 .wave-pips { z-index: 8; top: 42px; align-items: center; }
+.battle-scene.v4 .combo-chip { z-index: 8; }
+.battle-scene.v4 .scene-vignette { z-index: 2; pointer-events: none; }
+
+.wave-pips .wave-label {
+  font-family: var(--font-display);
+  font-size: 9.5px;
+  letter-spacing: 0.4px;
+  color: #ffd9a8;
+  background: rgba(10, 7, 16, 0.66);
+  border: 1px solid rgba(201, 162, 74, 0.3);
+  border-radius: 99px;
+  padding: 1px 6px;
+  white-space: nowrap;
+}
+.wave-pips .wave-label.boss { color: #ffb3b9; border-color: rgba(224, 64, 79, 0.5); }
+.wave-pips .wave-count {
+  font-size: 9.5px;
+  font-weight: 900;
+  color: #ffd9a8;
+  min-width: 26px;
+}
+.wave-pip { width: 44px; height: 6px; }
+.wave-pip.boss { width: 72px; }
+.wave-pip.boss i { background: linear-gradient(90deg, #7a1620, #e0404f, #ffb03a); }
+
+/* 파티 칩 (리더 교체) */
+.party-strip {
+  position: absolute;
+  top: 44px;
+  left: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 9;
+}
+.pc {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 7px 3px 4px;
+  border-radius: 12px;
+  background: rgba(8, 6, 14, 0.62);
+  border: 1px solid rgba(122, 79, 192, 0.35);
+  color: #e8dfd0;
+  font-family: var(--font-display);
+  cursor: pointer;
+  backdrop-filter: blur(3px);
+  text-align: left;
+  min-width: 78px;
+}
+.pc.lead {
+  border-color: rgba(255, 216, 140, 0.85);
+  box-shadow: 0 0 12px rgba(255, 200, 120, 0.35);
+  background: rgba(34, 22, 10, 0.72);
+}
+.pc.down { filter: grayscale(1); opacity: 0.5; }
+.pc:active { transform: scale(0.96); }
+.pc-ico {
+  width: 20px; height: 20px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  font-size: 11px;
+  background: radial-gradient(circle at 40% 30%, var(--pc, #8a7faf), rgba(0, 0, 0, 0.65));
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  flex: none;
+}
+.pc-meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.pc-meta b { font-size: 9px; letter-spacing: 0.2px; color: #f3e7d4; line-height: 1.1; }
+.pc-hp { display: block; height: 3px; border-radius: 2px; background: rgba(255, 255, 255, 0.18); overflow: hidden; }
+.pc-hp em { display: block; height: 100%; background: linear-gradient(90deg, #6be0a0, #a8ffd0); transition: width 0.14s linear; }
+
+/* 궁극기 */
+.ult-btn {
+  position: absolute;
+  right: 10px;
+  bottom: 74px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  z-index: 26;
+  border: 1.5px solid rgba(201, 162, 74, 0.42);
+  background: radial-gradient(circle at 50% 30%, rgba(64, 48, 18, 0.92), rgba(12, 9, 18, 0.96));
+  color: #ffe9a8;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+  touch-action: none;
+}
+.ult-btn .ult-ico { font-size: 20px; line-height: 1; text-shadow: 0 0 10px rgba(255, 220, 150, 0.9); }
+.ult-btn .ult-txt { font-size: 7.5px; font-style: normal; letter-spacing: 0.3px; color: #e8d6ae; }
+.ult-fill {
+  position: absolute;
+  left: 0; bottom: 0;
+  height: 100%;
+  width: 0;
+  background: linear-gradient(0deg, rgba(255, 200, 90, 0.35), rgba(255, 120, 60, 0.12));
+  pointer-events: none;
+}
+.ult-pct { position: absolute; bottom: 2px; font-size: 7.5px; color: #fff2cf; opacity: 0.85; }
+.ult-btn.ready {
+  border-color: #ffe9a8;
+  box-shadow: 0 0 22px rgba(255, 200, 110, 0.65), inset 0 0 18px rgba(255, 190, 90, 0.4);
+  animation: ultReady 1.1s ease-in-out infinite;
+}
+@keyframes ultReady {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+
+/* 파티 탭 */
+.party-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(36, 26, 50, 0.9), rgba(14, 10, 22, 0.95));
+  border: 1px solid rgba(122, 79, 192, 0.3);
+}
+.party-head .ph-ico { font-size: 24px; }
+.party-head .ph-copy { flex: 1; min-width: 0; }
+.party-head .ph-copy b { display: block; font-family: var(--font-display); font-size: 15px; color: var(--bone, #efe4d2); letter-spacing: 0.4px; }
+.party-head .ph-copy span { font-size: 10.5px; color: var(--dim, #9c93b3); }
+.party-list { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.pm-card {
+  border-radius: 18px;
+  padding: 12px;
+  background: linear-gradient(180deg, #1a1424, #0d0a14);
+  border: 1px solid rgba(122, 79, 192, 0.26);
+  box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.6);
+}
+.pm-card.lead {
+  border-color: rgba(255, 216, 140, 0.6);
+  box-shadow: 0 0 18px rgba(255, 200, 120, 0.16), inset 0 0 24px rgba(0, 0, 0, 0.6);
+}
+.pm-card.hero { background: linear-gradient(180deg, #241420, #0f0a12); }
+.pm-top { display: flex; gap: 10px; align-items: center; }
+.pm-ico {
+  width: 44px; height: 44px;
+  border-radius: 14px;
+  display: grid; place-items: center;
+  font-size: 20px;
+  background: radial-gradient(circle at 40% 30%, var(--pc, #8a7faf), rgba(0, 0, 0, 0.72));
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  flex: none;
+}
+.pm-copy { flex: 1; min-width: 0; }
+.pm-copy b { display: block; font-family: var(--font-display); font-size: 13px; color: var(--bone, #efe4d2); }
+.pm-copy span { font-size: 10.5px; color: var(--dim, #9c93b3); }
+.pm-lv { color: #ffd9a8; font-size: 10px; }
+.pm-act { flex: none; }
+.pm-body p { font-size: 11px; color: var(--mist, #c9c0da); line-height: 1.55; margin: 8px 0; }
+.pm-chips { display: flex; gap: 5px; flex-wrap: wrap; }
+.pm-level { display: flex; align-items: center; gap: 8px; margin-top: 9px; }
+.pm-cost { font-size: 10px; color: var(--dim, #9c93b3); font-weight: 800; }
+
+/* 짧은 화면(가로 모드) 보정 */
+@media (max-height: 460px) {
+  .party-strip { top: 38px; left: 6px; gap: 3px; }
+  .pc { padding: 2px 5px 2px 3px; min-width: 66px; }
+  .pc-ico { width: 16px; height: 16px; font-size: 9px; }
+  .pc-meta b { font-size: 8px; }
+  .ult-btn { width: 46px; height: 46px; right: 8px; bottom: 64px; }
+  .ult-btn .ult-ico { font-size: 16px; }
+  .ult-btn .ult-txt { font-size: 6.5px; }
+  .battle-scene.v4 .wave-pips { top: 36px; }
+  .wave-pip { width: 30px; height: 5px; }
+}
+
+/* 가로 모드(짧은 높이)에서 컨트롤 바가 잘리지 않게 */
+@media (max-height: 470px) {
+  body.battle-focus .control-bar { gap: 4px; padding: 4px 8px calc(4px + var(--safe-bottom)); }
+  body.battle-focus .ctl-main { grid-template-columns: 68px minmax(0, 1fr); gap: 5px; }
+  body.battle-focus .ctl-attack { border-radius: 14px; }
+  body.battle-focus .ctl-attack .ca-ico { font-size: 17px; }
+  body.battle-focus .ctl-attack .ca-txt { font-size: 9.5px; }
+  body.battle-focus .skill-btn { padding: 3px 3px 2px; border-radius: 12px; }
+  body.battle-focus .skill-btn .sk-ico { font-size: 15px; }
+  body.battle-focus .skill-btn .sk-name { font-size: 9px; }
+  body.battle-focus .skill-btn .sk-cd-text { font-size: 7.5px; }
+  body.battle-focus .ctl-react { gap: 5px; }
+  body.battle-focus .react-btn { padding: 4px 4px; font-size: 9.5px; border-radius: 11px; }
+  body.battle-focus .react-btn .rb-ico { font-size: 11px; }
+  body.battle-focus .battle-scene.v4 { min-height: 120px; }
+}
+
+/* 파티 탭이 늘어난 5칸 내비 */
+.bottom-nav { grid-template-columns: repeat(5, 1fr) !important; }
+@media (max-width: 380px) {
+  .nav-btn .nav-label { font-size: 9px !important; letter-spacing: 0 !important; }
+  .nav-btn .nav-ico { font-size: 16px !important; }
 }

@@ -16,19 +16,23 @@
   let repeatTimer = null;
 
   /* ===============================================================
-     전체 화면 보스 아레나 (집중 전투 모드)
+     전체 화면 전투 아레나 (캔버스 집중 모드)
      =============================================================== */
   function enterBattleFocus(boss) {
     document.body.classList.add("battle-focus");
     setTimeout(() => {
-      if (!document.body.classList.contains("battle-focus")) return;
-      if (window.VFX) { VFX.resize(); VFX.setBoss(!!boss); VFX.start(); }
-    }, 30);
+      if (window.Arena) {
+        Arena.resize();
+        Arena.setStage(G.battle ? G.battle.stage : null);
+        Arena.start();
+      }
+      void boss;
+    }, 20);
   }
 
   function exitBattleFocus() {
     document.body.classList.remove("battle-focus");
-    if (window.VFX) { VFX.setBoss(false); VFX.stop(); }
+    if (window.Arena) Arena.stop();
   }
 
   /* ===============================================================
@@ -341,48 +345,31 @@
   function renderBattleChrome() {
     const b = G.battle;
     if (!b) return;
-    const key = b.stageKey + ":" + b.waveIndex + ":" + b.enemyIndex;
-    if (key === battleKey && $("heroSprite").children.length) {
-      $("battleStage").textContent = `${b.stage.label} · ${b.stage.name}`;
-      return;
-    }
-    battleKey = key;
-
-    const scene = $("battleScene");
-    const tint = $("bfTint");
-    if (tint) {
-      tint.style.background = `linear-gradient(180deg, ${b.stage.sky[0]}77 0%, ${b.stage.sky[1]}bb 58%, #05040acc 100%)`;
-    }
-    scene.style.setProperty("--hill1", b.stage.ground);
-    scene.style.setProperty("--hill2", b.stage.sky[0]);
     $("battleStage").textContent = `${b.stage.label} · ${b.stage.name}`;
-
-    const tierNow = G.tierOf();
-    $("heroSprite").innerHTML = `<img class="sprite-img hero-img" src="${G.sprites.ART.hero}" alt="" style="--hero-glow:${tierNow.glow.replace(/[\d.]+\)$/, "0.85)")}">`;
     $("autoToggle").checked = !!b.auto;
-
-    const deco2 = { 1: "🕯️", 2: "🍄", 3: "🩸", 4: "☁️", 5: "✨", 6: "🦋", 7: "🌘", 8: "🪨", 9: "🕊️", 10: "🏰", 11: "❄️", 12: "🌊", 13: "⏳", 14: "🔥", 15: "👑" };
-    $("deco1").textContent = b.stage.emoji;
-    $("deco2").textContent = deco2[b.stage.world] || "✦";
-
+    if (window.Arena) { Arena.setStage(b.stage); Arena.resize(); Arena.start(); }
     enterBattleFocus(!!b.stage.isBoss);
-    renderEnemySprite();
     renderSkillBar();
+    renderPartyStrip(true);
+    updateBattleFrame();
   }
 
-  function renderEnemySprite() {
+  /* 파티 칩 (리더 교체 버튼) */
+  function renderPartyStrip(force) {
     const b = G.battle;
-    const fy = $("enemyFighter");
-    fy.classList.remove("dead", "telegraph", "shielded", "enraged");
-    if (!b || !b.enemy) { $("enemySprite").innerHTML = ""; return; }
-    const e = b.enemy;
-    fy.classList.toggle("boss", !!e.boss);
-    $("enemySprite").innerHTML = `<img class="sprite-img enemy-img" src="${G.sprites.monsterArt(e, e.boss)}" alt="" draggable="false">`;
-    $("enemySprite").style.setProperty("--tint", G.sprites.monsterTint(e));
-    $("enemyName").textContent = e.name + (e.boss ? " 👑" : "");
-    $("tapHint").style.display = "";
-    if (window.VFX) VFX.setBoss(!!e.boss || !!b.stage.isBoss);
-    if (e.boss) { sfx("boss"); vibrate([12, 40, 12]); }
+    const strip = $("partyStrip");
+    if (!strip || !b) return;
+    const sig = b.units.map((u) => u.partyId || "hero").join("|") + "#" + b.leaderIdx;
+    if (!force && sig === renderPartyStrip._sig) return;
+    renderPartyStrip._sig = sig;
+    strip.innerHTML = b.units.map((u, i) =>
+      `<button class="pc ${i === b.leaderIdx ? "lead" : ""} ${u.alive ? "" : "down"}" data-party="${i}" title="${u.name} 조종">
+        <span class="pc-ico" style="--pc:${u.color}">${u.icon}</span>
+        <span class="pc-meta">
+          <b>${u.name}</b>
+          <i class="pc-hp"><em style="width:100%"></em></i>
+        </span>
+      </button>`).join("");
   }
 
   function renderSkillBar() {
@@ -405,7 +392,7 @@
   /* 방어 · 회피 · 카운터 (지배자 패턴 대응) */
   function renderReactBar() {
     const b = G.battle;
-    const pat = b && b.enemy && b.enemy.pattern;
+    const pat = b && b.boss && b.boss.pattern;
     const responded = pat && pat.responded;
     document.querySelectorAll(".react-btn").forEach((btn) => {
       const live = !!pat && !responded;
@@ -417,35 +404,47 @@
 
   function renderWavePips() {
     const b = G.battle;
-    if (!b) return;
-    const wave = b.waves[b.waveIndex];
-    const total = wave.monsters.length;
-    const done = b.enemyIndex;
-    let html = "";
-    for (let i = 0; i < total; i++) {
-      const pct = i < done ? 100 : (i === done && b.enemy ? Math.round((1 - b.enemy.hp / b.enemy.maxHp) * 100) : 0);
-      html += `<span class="wave-pip ${i < done ? "done" : ""}"><i style="width:${pct}%"></i></span>`;
+    const box = $("wavePips");
+    if (!b || !box) return;
+    const w = b.waves[b.waveIndex];
+    if (!w) return;
+    if (w.boss) {
+      const pct = b.boss ? Math.round((1 - b.boss.hp / b.boss.maxHp) * 100) : 0;
+      box.innerHTML = `<span class="wave-label boss">👑 지배자</span><span class="wave-pip boss"><i style="width:${pct}%"></i></span>`;
+      return;
     }
-    $("wavePips").innerHTML = html;
+    const pct = Math.min(100, (b.waveKilled / Math.max(1, w.quota)) * 100);
+    box.innerHTML = `<span class="wave-label">${b.waveIndex + 1}/${b.waves.length}진</span>` +
+      `<span class="wave-pip"><i style="width:${pct}%"></i></span>` +
+      `<span class="wave-count">${Math.min(b.waveKilled, w.quota)}/${w.quota}</span>`;
   }
 
   function updateBattleFrame() {
     const b = G.battle;
     if (!b) return;
     const st = G.heroStats();
-    const hpPct = Math.max(0, Math.min(100, (S().hero.hp / st.maxHp) * 100));
-    $("fightHeroHp").style.width = hpPct + "%";
+    const heroU = b.units[0];
+    const hpPct = Math.max(0, Math.min(100, ((heroU ? heroU.hp : S().hero.hp) / st.maxHp) * 100));
     $("heroHpFill").style.width = hpPct + "%";
     $("heroHpText").textContent = `${Math.round(S().hero.hp)} / ${st.maxHp}`;
     $("sceneVignette").classList.toggle("danger", hpPct <= 25);
-    if (b.enemy) {
-      const e = b.enemy;
-      $("fightEnemyHp").style.width = Math.max(0, (e.hp / e.maxHp) * 100) + "%";
-      $("enemyHpText").textContent = `${Math.max(0, Math.ceil(e.hp))} / ${e.maxHp}`;
-      $("enemyFighter").classList.toggle("shielded", !!e.shield);
-      $("enemyFighter").classList.toggle("enraged", !!e.enraged);
-    }
-    renderWavePips();
+
+    renderPartyStrip(false);
+    const chips = $("partyStrip").querySelectorAll(".pc");
+    chips.forEach((el, i) => {
+      const u = b.units[i];
+      if (!u) return;
+      el.classList.toggle("lead", i === b.leaderIdx);
+      el.classList.toggle("down", !u.alive);
+      const em = el.querySelector(".pc-hp em");
+      if (em) em.style.width = Math.max(0, Math.min(100, (u.hp / u.maxHp) * 100)) + "%";
+    });
+
+    const uf = $("ultFill");
+    if (uf) uf.style.width = Math.min(100, (b.ult / G.ULT.chargeMax) * 100) + "%";
+    const ub = $("ultBtn");
+    if (ub) ub.classList.toggle("ready", b.ult >= G.ULT.chargeMax);
+    if ($("ultPct")) $("ultPct").textContent = Math.floor(Math.min(100, b.ult)) + "%";
 
     const buttons = $("skillBar").querySelectorAll(".skill-btn");
     buttons.forEach((btn) => {
@@ -465,7 +464,7 @@
     setCoin("stoneTop", S().stones);
     setCoin("fragTop", S().relFrags);
 
-    const patNow = b.enemy && b.enemy.pattern;
+    const patNow = b.boss && b.boss.pattern;
     document.querySelectorAll(".react-btn").forEach((btn) => {
       const live = !!patNow && !patNow.responded;
       if (btn.disabled === live) btn.disabled = !live;
@@ -473,9 +472,18 @@
       btn.classList.toggle("done", !!(patNow && patNow.responded));
     });
 
+    renderWavePips();
     $("biWeapon").textContent = "+" + S().equipped.level;
     $("biAtk").textContent = G.fmt(st.atk);
     $("biCrit").textContent = G.pct(st.critChance);
+
+    const db = $("dashBtn");
+    if (db) {
+      const cd = (b.units[b.leaderIdx] && b.units[b.leaderIdx].dashCd) || 0;
+      db.classList.toggle("cooling", cd > 0);
+      const fld = db.querySelector("i");
+      if (fld) fld.style.transform = `scaleY(${Math.max(0, Math.min(1, 1 - cd / G.FIELD.dashCd)).toFixed(3)})`;
+    }
   }
 
   /* ===============================================================
@@ -494,7 +502,6 @@
     $("ppHint").textContent = pat.hint;
     $("ppTimer").textContent = total.toFixed(1);
     $("ppFill").style.width = "100%";
-    $("enemyFighter").classList.add(phase === "active" ? "shielded" : "telegraph");
     renderReactBar();
     sfx("warn");
   }
@@ -514,7 +521,6 @@
     $("tab-hunt").classList.remove("pattern-on");
     $("patternPanel").classList.add("hidden");
     $("patternPanel").classList.remove("shield", "responded");
-    $("enemyFighter").classList.remove("telegraph");
     document.querySelectorAll(".react-btn").forEach((btn) => {
       btn.disabled = true;
       btn.classList.remove("live", "done");
@@ -742,95 +748,71 @@
   }
 
   /* ===============================================================
-     전장 렌더 (실시간 이동 · 지면 경고)
+     3인 파티 탭
      =============================================================== */
-  function projField(x, y) {
-    return {
-      left: 9 + (x / 100) * 82,
-      bottom: 12 + ((100 - y) / 100) * 50,
-      scale: 0.60 + (y / 100) * 0.26
-    };
-  }
+  function renderPartyTab() {
+    const box = $("partyList");
+    if (!box) return;
+    const s = S();
+    const leadLabel = ["서약자", "가웨인", "리안"][s.party.leaderIdx] || "서약자";
+    if ($("partyLeadName")) $("partyLeadName").textContent = leadLabel;
 
-  function paintField() {
-    const b = G.battle;
-    if (!b || !b.hero) return;
-    const h = b.hero;
-    const ph = projField(h.x, h.y);
-    const hf = $("heroFighter");
-    if (hf) {
-      hf.style.left = ph.left + "%";
-      hf.style.bottom = ph.bottom + "%";
-      hf.style.transform = `translateX(-50%) scale(${ph.scale.toFixed(3)})`;
-      hf.style.zIndex = String(10 + Math.round(h.y));
-      hf.classList.toggle("face-left", h.face < 0);
-      hf.classList.toggle("moving", !!h.moving);
-      hf.classList.toggle("dashing", h.dashT > 0);
-      hf.classList.toggle("swinging", h.swing > 0);
-    }
-    const e = b.enemy;
-    const ef = $("enemyFighter");
-    if (e && ef) {
-      const pe = projField(e.x, e.y);
-      ef.style.left = pe.left + "%";
-      ef.style.bottom = pe.bottom + "%";
-      ef.style.transform = `translateX(-50%) scale(${pe.scale.toFixed(3)})`;
-      ef.style.zIndex = String(10 + Math.round(e.y));
-      ef.classList.toggle("face-left", (e.face || 1) < 0);
-      ef.classList.toggle("moving", !!e.moving);
-    }
-    paintZones(b);
-    const db = $("dashBtn");
-    if (db) {
-      const cd = h.dashCd || 0;
-      db.classList.toggle("cooling", cd > 0);
-      const fld = db.querySelector("i");
-      if (fld) fld.style.transform = `scaleY(${Math.max(0, Math.min(1, 1 - cd / G.FIELD.dashCd)).toFixed(3)})`;
-    }
-  }
+    const heroSt = G.heroStats();
+    const cards = [];
 
-  function paintZones(b) {
-    const layer = $("zoneLayer");
-    if (!layer) return;
-    const list = (b.zones || []).filter((z) => z.t > 0);
-    const sig = list.map((z) => z.id).join("|");
-    if (sig !== paintZones._sig) {
-      paintZones._sig = sig;
-      const arena = $("arenaEl");
-      const arw = (arena && arena.clientWidth) || 320;
-      const arh = (arena && arena.clientHeight) || 220;
-      layer.innerHTML = list.map((z) => {
-        if (z.kind === "circle") {
-          const p = projField(z.x, z.y);
-          const w = Math.min(70, z.r * 1.7);
-          const hh = Math.min(46, z.r * 1.05);
-          return `<div class="zone circle" data-z="${z.id}" style="left:${p.left.toFixed(2)}%;bottom:${p.bottom.toFixed(2)}%;width:${w.toFixed(1)}%;height:${hh.toFixed(1)}%"><i class="zc"></i></div>`;
-        }
-        const p1 = projField(z.x1, z.y1);
-        const p2 = projField(z.x2, z.y2);
-        const x1 = (p1.left / 100) * arw, y1 = (p1.bottom / 100) * arh;
-        const x2 = (p2.left / 100) * arw, y2 = (p2.bottom / 100) * arh;
-        const len = Math.hypot(x2 - x1, y2 - y1) || 1;
-        const ang = (Math.atan2(-(y2 - y1), x2 - x1) * 180) / Math.PI;
-        const thick = Math.max(14, z.w * (arh * 0.5 / 100) * 1.15);
-        return `<div class="zone lane" data-z="${z.id}" style="left:${p1.left.toFixed(2)}%;bottom:${p1.bottom.toFixed(2)}%;width:${((len / arw) * 100).toFixed(1)}%;height:${((thick / arh) * 100).toFixed(1)}%;transform:rotate(${ang.toFixed(1)}deg)"><i class="zc"></i></div>`;
-      }).join("");
-    }
-    list.forEach((z) => {
-      const el = layer.querySelector('[data-z="' + z.id + '"]');
-      if (!el) return;
-      el.style.setProperty("--p", ((1 - z.t / z.total) * 100).toFixed(1) + "%");
+    cards.push(`<div class="pm-card hero ${s.party.leaderIdx === 0 ? "lead" : ""}">
+      <div class="pm-top">
+        <div class="pm-ico" style="--pc:#ff5a6e">🗡</div>
+        <div class="pm-copy">
+          <b>서약자 <span class="pm-lv">Lv.${s.hero.level}</span></b>
+          <span>성검을 쥔 리더 · 공격 ${G.fmt(heroSt.atk)} · 체력 ${G.fmt(heroSt.maxHp)}</span>
+        </div>
+        <div class="pm-act">
+          <button class="btn btn-ghost btn-sm" data-leader="0" ${s.party.leaderIdx === 0 ? "disabled" : ""}>${s.party.leaderIdx === 0 ? "조종 중" : "리더로"}</button>
+        </div>
+      </div>
+      <div class="pm-body">
+        <p>대장간에서 벼린 검이 곧 파티의 화력입니다. 장착 슬롯의 검을 올리면 동료의 공격도 함께 올라갑니다.</p>
+        <div class="pm-chips"><span class="chip rose">⚔ ${G.fmt(heroSt.atk)}</span><span class="chip gold">🎯 ${G.pct(heroSt.critChance)}</span><span class="chip lav">💥 ${G.pct(heroSt.critDmg)}</span></div>
+      </div>
+    </div>`);
+
+    G.PARTY.forEach((def, i) => {
+      const c = s.party.members[def.id];
+      const st = G.partyStats(def.id);
+      const cost = G.partyLevelCost(def.id);
+      const maxed = c.lv >= G.PARTY_LV.max;
+      const can = !maxed && s.gold >= cost.gold && s.stones >= cost.stones;
+      const idx = i + 1;
+      cards.push(`<div class="pm-card ${s.party.leaderIdx === idx ? "lead" : ""}">
+        <div class="pm-top">
+          <div class="pm-ico" style="--pc:${def.color}">${def.icon}</div>
+          <div class="pm-copy">
+            <b>${def.name} <span class="pm-lv">Lv.${c.lv}</span></b>
+            <span>${def.role === "vanguard" ? "선봉" : "원거리"} · 공격 ${G.fmt(st.atk)} · 체력 ${G.fmt(st.maxHp)}</span>
+          </div>
+          <div class="pm-act">
+            <button class="btn btn-ghost btn-sm" data-leader="${idx}" ${s.party.leaderIdx === idx ? "disabled" : ""}>${s.party.leaderIdx === idx ? "조종 중" : "리더로"}</button>
+          </div>
+        </div>
+        <div class="pm-body">
+          <p>${def.desc}</p>
+          <div class="pm-chips">
+            <span class="chip">${def.skill.icon} ${def.skill.name}</span>
+            <span class="chip mint">⏱ ${st.interval.toFixed(2)}초</span>
+            <span class="chip lav">✦ ${Math.round(st.skillPower * 100)}%</span>
+          </div>
+          <div class="pm-level">
+            <button class="btn btn-primary btn-sm" data-plevel="${def.id}" ${can ? "" : "disabled"}>
+              ${maxed ? "최고 레벨" : "성장"}
+            </button>
+            <span class="pm-cost">${maxed ? "MAX" : `🪙 ${G.fmt(cost.gold)}${cost.stones ? " · 💠 " + cost.stones : ""}`}</span>
+          </div>
+        </div>
+      </div>`);
     });
-  }
 
-  function startFieldLoop() {
-    const tick = () => {
-      requestAnimationFrame(tick);
-      if (G.battle && currentTab === "hunt") {
-        try { paintField(); } catch (e) { if (!startFieldLoop._warned) { startFieldLoop._warned = true; console.warn("[field]", e); } }
-      }
-    };
-    requestAnimationFrame(tick);
+    box.innerHTML = cards.join("");
   }
 
   function bindMovePad() {
@@ -878,7 +860,6 @@
     if (!G.battle) return;
     const res = G.arena.attack();
     if (res.ok) {
-      if ($("tapHint")) $("tapHint").style.display = "none";
       sfx("tap");
       vibrate(8);
       const ab = $("attackBtn");
@@ -999,9 +980,14 @@
     const b = G.battle;
     const mini = $("battleMini");
     if (!b) { mini.classList.remove("show"); return; }
-    const boss = b.enemy && b.enemy.boss ? "👑 " : "";
-    $("battleMiniStage").textContent = `${boss}${b.stage.label} · ${b.enemy ? b.enemy.name : "이동 중"}`;
-    $("battleMiniHp").textContent = b.enemy ? Math.ceil((b.enemy.hp / b.enemy.maxHp) * 100) + "%" : "";
+    const alive = b.mobs.filter((m) => !m.dead).length;
+    const boss = b.boss && !b.boss.dead ? "👑 " : "";
+    $("battleMiniStage").textContent = b.boss && !b.boss.dead
+      ? `${boss}${b.stage.label} · ${b.boss.name}`
+      : `${b.stage.label} · ${b.stage.name}`;
+    $("battleMiniHp").textContent = b.boss && !b.boss.dead
+      ? Math.ceil((b.boss.hp / b.boss.maxHp) * 100) + "%"
+      : `${alive}마리`;
     mini.classList.toggle("show", currentTab !== "hunt");
   }
 
@@ -1020,6 +1006,7 @@
     }
     if (tab === "forge") renderForge();
     if (tab === "relic") renderRelics();
+    if (tab === "party") renderPartyTab();
     if (tab === "codex") renderCodex();
     updateBattleMini();
     applyTutorialHighlight();
@@ -1038,6 +1025,7 @@
     renderHunt();
     renderForge();
     renderRelics();
+    renderPartyTab();
     renderCodex();
     renderQuest();
     updateBattleMini();
@@ -1162,15 +1150,51 @@
       toast(e.target.checked ? "자동 전투를 켰습니다" : "자동 전투를 껐습니다. 직접 눌러 베십시오", "", e.target.checked ? "🤖" : "⚔");
     });
 
-    $("enemyFighter").addEventListener("click", () => {
-      if (!G.battle) return;
-      const res = G.tapAttack();
-      if (res.ok) {
-        $("tapHint").style.display = "none";
-        sfx("tap");
-        vibrate(8);
-      }
-    });
+    // 아레나 화면을 눌러도 벤다 (arena.js 가 처리하지만 컨트롤 버튼은 여기서)
+    const stripEl = $("partyStrip");
+    if (stripEl) {
+      stripEl.addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-party]");
+        if (!btn || !G.battle) return;
+        const idx = Number(btn.dataset.party);
+        const r = G.setLeader(idx);
+        if (!r.ok && r.reason === "down") toast("쓰러진 영웅으로는 바꿀 수 없습니다", "bad", "💫");
+        else if (r.ok) renderPartyStrip(true);
+      });
+    }
+    if ($("ultBtn")) {
+      $("ultBtn").addEventListener("click", () => {
+        const r = G.castUltimate();
+        if (!r.ok) {
+          if (r.reason === "charge") toast(`궁극기 충전 ${Math.floor(G.battle ? G.battle.ult : 0)}%`, "", "✦");
+          else if (r.reason === "down") toast("지금은 쓸 수 없습니다", "bad", "✦");
+        }
+      });
+    }
+    if ($("partyList")) {
+      $("partyList").addEventListener("click", (e) => {
+        const leadBtn = e.target.closest("[data-leader]");
+        if (leadBtn) {
+          const r = G.setLeader(Number(leadBtn.dataset.leader));
+          if (r.ok) { renderPartyTab(); toast("리더를 바꿨습니다", "good", "👥"); }
+          return;
+        }
+        const lvBtn = e.target.closest("[data-plevel]");
+        if (lvBtn) {
+          const r = G.levelCompanion(lvBtn.dataset.plevel);
+          if (!r.ok) {
+            toast(r.reason === "gold" ? "골드가 부족합니다" : r.reason === "stones" ? "룬석이 부족합니다" : "지금은 성장할 수 없습니다", "bad", "👥");
+            return;
+          }
+          sfx("success");
+          vibrate(14);
+          const def = G.PARTY.find((p) => p.id === lvBtn.dataset.plevel);
+          toast(`${def.short} Lv.${r.level} 성장!`, "good", def.icon);
+          renderPartyTab();
+          renderHeader(false);
+        }
+      });
+    }
 
     $("skillBar").addEventListener("click", (e) => {
       const btn = e.target.closest("[data-skill]");
@@ -1195,7 +1219,6 @@
       if (!G.battle) return;
       const res = G.tapAttack();
       if (res.ok) {
-        $("tapHint").style.display = "none";
         $("attackBtn").classList.remove("hit");
         void $("attackBtn").offsetWidth;
         $("attackBtn").classList.add("hit");
@@ -1220,11 +1243,10 @@
         }
         return;
       }
-      if (res.kind === "guard") { sfx("guard"); floatNum($("heroSprite"), "방어!", "heal"); }
-      else if (res.kind === "dodge") { sfx("dodge"); floatNum($("heroSprite"), "회피!", "heal"); }
-      else if (res.kind === "counter") { sfx("counter"); vibrate(24); floatNum($("enemySprite"), "카운터!", "crit", "COUNTER"); sparkle($("enemySprite"), 6); }
+      if (res.kind === "guard") { sfx("guard"); }
+      else if (res.kind === "dodge") { sfx("dodge"); }
+      else if (res.kind === "counter") { sfx("counter"); vibrate(24); }
       $("patternPanel").classList.add("responded");
-      $("enemyFighter").classList.remove("telegraph");
       renderReactBar();
     });
 
@@ -1694,7 +1716,8 @@
       </div>
       <div class="welcome-tips">
         <div class="welcome-tip"><div class="wt-ico">⚒️</div><div><b>망치질</b><p>+0에서 +25까지. 실패하면 내려가고, +10강부터는 부서질 수 있습니다.</p></div></div>
-        <div class="welcome-tip"><div class="wt-ico">⚔️</div><div><b>사냥</b><p>화면의 '공격' 버튼이나 몬스터를 직접 눌러 벱니다. 스킬창에서 기술을 씁니다.</p></div></div>
+        <div class="welcome-tip"><div class="wt-ico">⚔️</div><div><b>몰이사냥</b><p>한 번에 8~14마리가 몰려옵니다. 공격 한 번이 무리째 베고, 기술 3종은 진짜 광역기입니다.</p></div></div>
+        <div class="welcome-tip"><div class="wt-ico">👥</div><div><b>3인 파티</b><p>철벽 기사 가웨인·화염 술사 리안과 함께 싸웁니다. 좌측 파티 칩으로 리더를 바꿔 직접 조종하세요.</p></div></div>
         <div class="welcome-tip"><div class="wt-ico">👁️</div><div><b>지배자</b><p>X-10, X-15는 지배자의 방. 아래 방어·회피·카운터 버튼으로 패턴을 받아냅니다.</p></div></div>
         <div class="welcome-tip"><div class="wt-ico">💾</div><div><b>자동 저장</b><p>모든 진행은 자동으로 저장됩니다. 앱을 닫아도 이어집니다.</p></div></div>
       </div>
@@ -1808,71 +1831,115 @@
      코어 이벤트
      =============================================================== */
   function bindGameEvents() {
-    const onKill = { _ct: null };
+    const onKill = { _ct: null, _sfx: 0 };
+    let lastHitSfx = 0;
+
     G.bus.on("battle:start", () => {
       battleKey = "";
       hidePattern();
-      paintZones._sig = "";
-      const zl = $("zoneLayer");
-      if (zl) zl.innerHTML = "";
+      renderPartyStrip._sig = "";
       renderHunt();
     });
 
-    G.bus.on("battle:enemy", (p) => {
-      $("enemyFighter").classList.remove("dead");
+    G.bus.on("battle:enemy", () => {
       hidePattern();
-      renderEnemySprite();
-      if (p.boss) { /* 보스 등장은 패턴 패널이 알려줘요 */ }
       updateBattleFrame();
+    });
+
+    G.bus.on("battle:bossSpawn", (p) => {
+      sfx("boss");
+      vibrate([12, 40, 12]);
+      toast(`👑 ${p.boss.name} 강림! 붉은 지대를 벗어나세요`, "bad", "👑");
+      renderPartyStrip(true);
     });
 
     G.bus.on("battle:damage", (p) => {
+      const now = Date.now();
       if (p.target === "enemy") {
-        floatNum($("enemySprite"), String(p.amount), (p.crit ? "crit " : "") + (p.skill ? "skill" : ""), p.crit ? "CRIT!" : "");
-        const hf = $("heroFighter");
-        hf.classList.remove("attack"); void hf.offsetWidth; hf.classList.add("attack");
-        const ef = $("enemyFighter");
-        ef.classList.remove("hit"); void ef.offsetWidth; ef.classList.add("hit");
-        setTimeout(() => { hf.classList.remove("attack"); ef.classList.remove("hit"); }, 360);
-        sfx(p.crit ? "crit" : "hit");
-        if (p.crit) { vibrate(14); sparkle($("enemySprite"), 4); }
-        if (p.shielded) toast("보호막이 공격을 막고 있어요! 카운터를 노려요", "", "🛡️");
-        updateBattleFrame();
-      } else {
-        floatNum($("heroSprite"), "-" + p.amount, "hero");
-        const hf = $("heroFighter");
-        hf.classList.remove("hurt"); void hf.offsetWidth; hf.classList.add("hurt");
-        setTimeout(() => hf.classList.remove("hurt"), 340);
-        updateBattleFrame();
+        if (now - lastHitSfx > 70) {
+          lastHitSfx = now;
+          sfx(p.crit ? "crit" : "hit");
+          if (p.crit) vibrate(8);
+        }
+      } else if (p.target === "hero") {
+        if (now - lastHitSfx > 220) { lastHitSfx = now; vibrate(14); }
       }
     });
 
-    G.bus.on("battle:heal", (p) => {
-      floatNum($("heroSprite"), "+" + p.amount, "heal");
-      sparkle($("heroSprite"), 3);
+    G.bus.on("battle:heal", () => {
+      sfx("heal");
       updateBattleFrame();
     });
 
-    G.bus.on("battle:kill", (p) => {
-      $("enemyFighter").classList.add("dead");
-      dropCoins($("enemySprite"), p.boss ? 7 : 3);
-      floatNum($("enemySprite"), "+" + G.fmt(p.gold) + "G", "coin");
-      if (p.boss) { sparkle($("enemySprite"), 12); sfx("epic"); }
-      if (p.frags > 0) { floatNum($("enemySprite"), "🔮" + p.frags, "coin"); toast(`유물 조각 +${p.frags}!`, "epic", "🔮"); }
-      if (p.combo >= 3) {
+    G.bus.on("battle:skill", (p) => {
+      if (!p || !p.skill) return;
+      if (p.skill.type === "heal") sfx("heal");
+      else { sfx("crit"); vibrate(12); }
+      if (p.hits >= 3) {
         const chip = $("comboChip");
-        chip.textContent = `연속 ${p.combo}!`;
-        chip.classList.add("show");
-        clearTimeout(onKill._ct);
-        onKill._ct = setTimeout(() => chip.classList.remove("show"), 1200);
+        if (chip) {
+          chip.textContent = `${p.skill.name} ×${p.hits}`;
+          chip.classList.add("show");
+          clearTimeout(onKill._ct);
+          onKill._ct = setTimeout(() => chip.classList.remove("show"), 1200);
+        }
       }
-      sfx("coin");
+    });
+
+    G.bus.on("battle:kill", (p) => {
+      const now = Date.now();
+      if (now - onKill._sfx > 90) { onKill._sfx = now; sfx("coin"); }
+      if (p.frags > 0) toast(`유물 조각 +${p.frags}!`, "epic", "🔮");
+      if (p.combo >= 5) {
+        const chip = $("comboChip");
+        if (chip) {
+          chip.textContent = `연속 ${p.combo} 처치!`;
+          chip.classList.add("show");
+          clearTimeout(onKill._ct);
+          onKill._ct = setTimeout(() => chip.classList.remove("show"), 1200);
+        }
+      }
       setCoin("goldTop", S().gold);
       setCoin("stoneTop", S().stones);
       setCoin("fragTop", S().relFrags);
     });
 
-    G.bus.on("battle:wave", () => {
+    G.bus.on("battle:wave", (p) => {
+      renderPartyStrip(true);
+      updateBattleFrame();
+      if (p && p.wave > 1) toast(`🌊 ${p.wave}진 습격! 몰려옵니다`, "", "🌊");
+    });
+
+    G.bus.on("battle:waveClear", (p) => {
+      toast(`웨이브 클리어! 체력 회복 +${p.heal}`, "good", "🌿");
+      updateBattleFrame();
+    });
+
+    G.bus.on("battle:ult", (p) => {
+      sfx("epic");
+      vibrate([30, 60, 30]);
+      toast(`${G.ULT.name}! ${p.hits}마리 강타`, "epic", "✦");
+      updateBattleFrame();
+    });
+
+    G.bus.on("party:swap", (p) => {
+      if (p && p.unit) {
+        sfx("click");
+        toast(`${p.unit.name} 조종`, "", p.unit.icon);
+        renderPartyStrip(true);
+        renderPartyTab();
+        updateBattleFrame();
+      }
+    });
+
+    G.bus.on("party:down", (p) => {
+      if (!p || !p.unit) return;
+      toast(`${p.unit.name}이(가) 쓰러졌습니다`, "bad", "💫");
+      renderPartyStrip(true);
+    });
+
+    G.bus.on("party:revive", () => {
+      renderPartyStrip(true);
       updateBattleFrame();
     });
 
@@ -1895,40 +1962,30 @@
     });
     G.bus.on("battle:respond", () => {
       $("patternPanel").classList.add("responded");
-      $("enemyFighter").classList.remove("telegraph");
       renderReactBar();
     });
     G.bus.on("battle:patternResolve", (p) => {
       hidePattern();
       if (p.responded) {
         const label = p.pattern.action === "guard" ? "완벽한 방어!" : "완벽한 회피!";
-        floatNum($("heroSprite"), label, "heal");
-        sparkle($("heroSprite"), 5);
         toast(label + " 피해를 줄였습니다", "good", "🛡️");
       } else if (p.dodged) {
-        floatNum($("heroSprite"), "회피 성공!", "heal");
         toast("붉은 지대를 벗어났습니다!", "good", "🌀");
       } else if (p.dmg > 0) {
-        floatNum($("heroSprite"), "-" + p.dmg, "hero");
         vibrate(40);
         toast(`${p.pattern.name}에 맞았습니다! 다음엔 지대를 벗어나거나 대응하세요`, "bad", "💥");
       }
       updateBattleFrame();
     });
-    G.bus.on("battle:dash", () => {
-      const hf = $("heroFighter");
-      if (hf) { hf.classList.remove("dashFx"); void hf.offsetWidth; hf.classList.add("dashFx"); }
-      sfx("dodge");
-    });
+    G.bus.on("battle:dash", () => { sfx("dodge"); });
     G.bus.on("battle:patternEnd", () => { hidePattern(); });
     G.bus.on("battle:counter", (p) => {
-      floatNum($("enemySprite"), String(p.dmg), "crit", "COUNTER!");
-      sparkle($("enemySprite"), 8);
-      toast("보호막을 깼어요!", "epic", "⚡");
+      toast(`보호막을 깼어요! ${G.fmt(p.dmg)} 피해`, "epic", "⚡");
+      sfx("counter");
+      vibrate(24);
       updateBattleFrame();
     });
     G.bus.on("battle:enrage", () => {
-      $("enemyFighter").classList.add("enraged");
       toast("보스가 격노했어요! 공격이 빨라져요", "bad", "🔥");
       vibrate([20, 40, 20]);
       sfx("warn");
@@ -1984,7 +2041,7 @@
       if (dt > 1.5) dt = 1.5;
       if (dt < 0) dt = 0;
       try {
-        G.tick(dt);
+        if (!G.battle) G.tick(dt);
         if (G.battle) updateBattleFrame();
         setCoin("goldTop", S().gold);
         setCoin("stoneTop", S().stones);
@@ -2018,12 +2075,11 @@
      =============================================================== */
   function start() {
     G.boot();
-    if (window.VFX && $("vfxCanvas")) VFX.init($("vfxCanvas"));
+    if (window.Arena && $("arenaCanvas")) Arena.init($("arenaCanvas"));
     bindEvents();
     bindGameEvents();
     renderAll();
     renderHeader(true);
-    startFieldLoop();
 
     currentWorld = 1;
     if (S().progress.maxStage > 1) {
