@@ -1111,6 +1111,7 @@
 
     bindEvents();
     bindBattle();
+    G.autoDemote();
     renderAll();
     updateAuto();
     stageChanged();
