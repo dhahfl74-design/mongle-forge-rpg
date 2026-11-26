@@ -472,6 +472,7 @@
       let wi = 0, ws = Infinity;
       S.inventory.forEach((x, i) => { const sc = G.itemScore(x); if (sc < ws) { ws = sc; wi = i; } });
       const drop = S.inventory.splice(wi, 1)[0];
+      if (S.forgeItem && S.forgeItem.uid === drop.uid) S.forgeItem = null;
       const r = G.salvage(drop);
       S.gold += r.gold; S.stones += r.stones;
     }
@@ -508,6 +509,7 @@
     if (weakest && G.itemScore(it) > ws) {
       S.inventory.splice(wi, 1);
       weakest.salvaged = true;
+      if (S.forgeItem && S.forgeItem.uid === weakest.uid) S.forgeItem = null;
       const r = salvageQuiet(weakest);
       it.stored = true;
       it.isNewInv = true;
