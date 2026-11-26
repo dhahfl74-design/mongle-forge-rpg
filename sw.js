@@ -1,5 +1,5 @@
 /* 심연의 대장간 v5.0 — 오프라인 캐시 (상자깡 리부트) */
-const CACHE_NAME = "abyss-forge-v5-lootbox-art2";
+const CACHE_NAME = "abyss-forge-v5-lootbox-art3";
 const ASSETS = [
   "./",
   "./index.html",
@@ -88,7 +88,7 @@ self.addEventListener("fetch", (event) => {
   // 문서와 코드는 네트워크 우선 — 새 버전이 바로 반영된다
   if (isDoc || isCode) {
     event.respondWith(
-      fetch(req).then((res) => putInCache(req, res)).catch(() =>
+      fetch(req, { cache: isCode ? "reload" : "default" }).then((res) => putInCache(req, res)).catch(() =>
         caches.match(req).then((cached) => cached || (isDoc ? caches.match("./index.html") : undefined))
       )
     );
