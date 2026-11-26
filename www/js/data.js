@@ -7,8 +7,8 @@
 
   const G = (window.GAME = window.GAME || {});
 
-  G.VERSION = "3.0.0";
-  G.SAVE_KEY = "mongle_forge_save_v2";      // 기존 저장과 호환
+  G.VERSION = "3.1.0";
+  G.SAVE_KEY = "mongle_forge_save_v2";      // 기존 저장과 호환 (v3 저장은 자동 이전)
   G.LEGACY_KEYS = ["sword_enhancer_app_save_v1"];
   G.MAX_LV = 25;
 
@@ -375,6 +375,41 @@
     { id: "codex10", icon: "📖", name: "도감 수집가", desc: "도감을 10칸 채웠습니다", reward: { gold: 3000, stones: 10, frags: 3 }, check: (s) => Object.keys(s.codex).length >= 10 },
     { id: "codexAll", icon: "🏆", name: "심연 도감 마스터", desc: "모든 몬스터를 기록했습니다", reward: { gold: 60000, stones: 80, frags: 25 }, check: (s) => Object.keys(s.codex).length >= Object.keys(G.MONSTERS).length }
   ];
+
+  /* ---------------------------------------------------------------
+     초보자 안내 퀘스트 (4단계)
+     --------------------------------------------------------------- */
+  G.TUTORIAL = [
+    {
+      id: "forge", icon: "⚒️", tab: "forge", target: "enhanceBtn",
+      title: "첫 망치질",
+      goal: "대장간에서 검을 1회 강화하기",
+      hint: "대장간 탭에서 [망치질]을 눌러보세요",
+      reward: { gold: 500, stones: 5 }
+    },
+    {
+      id: "equip", icon: "⚔️", tab: "forge", target: "equipBtn",
+      title: "성검을 손에",
+      goal: "강화한 검을 [장착하기]",
+      hint: "강화 슬롯의 [장착하기]를 누르면 그 검으로 사냥합니다",
+      reward: { gold: 800, stones: 4, protect: 1 }
+    },
+    {
+      id: "hunt", icon: "🗡️", tab: "hunt", target: "stageGrid",
+      title: "첫 사냥",
+      goal: "사냥 구역 1-1 클리어하기",
+      hint: "사냥 탭에서 1-1 잿빛 황야에 도전하세요",
+      reward: { gold: 1500, frags: 10 }
+    },
+    {
+      id: "relic", icon: "🔮", tab: "relic", target: "relicList",
+      title: "심연의 각성",
+      goal: "대장간 연구 또는 유물 1회 강화하기",
+      hint: "대장간 연구(골드)나 유물(파편) 중 하나를 올리면 완료됩니다",
+      reward: { gold: 3000, frags: 20, title: "심연의 서약자" }
+    }
+  ];
+  G.TUTORIAL_TITLE = "심연의 서약자";
 
   G.TIPS = [
     "강화는 +0부터 +25까지. +5강부터는 실패하면 단계가 내려갑니다.",

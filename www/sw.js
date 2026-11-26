@@ -1,5 +1,5 @@
 /* 몽글 대장간 — 오프라인 캐시 서비스 워커 */
-const CACHE_NAME = "abyss-forge-v3-1-0";
+const CACHE_NAME = "abyss-forge-v3-2-live-arena";
 const ASSETS = [
   "./",
   "./index.html",

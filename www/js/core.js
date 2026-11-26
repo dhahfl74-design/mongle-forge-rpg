@@ -54,12 +54,15 @@
 
   function defaults() {
     return {
-      version: 3,
+      version: 4,
       createdAt: Date.now(),
       gold: 1200,
       stones: 3,
       relFrags: 0,
-      weapon: { level: 0, pity: 0, protect: false },
+      // 강화 슬롯(모루 위)과 장착 슬롯(사냥에 쓰는 검)을 분리한다
+      forge: { level: 0, pity: 0, protect: false, freeProtect: 0 },
+      equipped: { level: 0 },
+      tutorial: { idx: 0, claimed: {}, skipped: false, collapsed: false, flags: {}, title: "" },
       hero: { level: 1, exp: 0, hp: 130 },
       upgrades: { skill: 0, pity: 0, furnace: 0, pickaxe: 0 },
       skills: { blossom: 0, jelly: 0, meteor: 0 },
@@ -111,8 +114,23 @@
     s.gold = clamp(int(s.gold, 1200), 0, Number.MAX_SAFE_INTEGER);
     s.stones = clamp(int(s.stones, 0), 0, Number.MAX_SAFE_INTEGER);
     s.relFrags = clamp(int(s.relFrags, 0), 0, Number.MAX_SAFE_INTEGER);
-    s.weapon.level = clamp(int(s.weapon.level, 0), 0, G.MAX_LV);
-    s.weapon.pity = clamp(num(s.weapon.pity, 0), 0, 100);
+    if (!isObj(s.forge)) s.forge = { level: 0, pity: 0, protect: false, freeProtect: 0 };
+    if (!isObj(s.equipped)) s.equipped = { level: 0 };
+    delete s.weapon;
+    s.forge.level = clamp(int(s.forge.level, 0), 0, G.MAX_LV);
+    s.forge.pity = clamp(num(s.forge.pity, 0), 0, 100);
+    s.forge.protect = !!s.forge.protect;
+    s.forge.freeProtect = clamp(int(s.forge.freeProtect, 0), 0, 99);
+    s.equipped.level = clamp(int(s.equipped.level, 0), 0, G.MAX_LV);
+    const tut = isObj(s.tutorial) ? s.tutorial : {};
+    s.tutorial = {
+      idx: clamp(int(tut.idx, 0), 0, G.TUTORIAL.length),
+      claimed: isObj(tut.claimed) ? tut.claimed : {},
+      skipped: !!tut.skipped,
+      collapsed: !!tut.collapsed,
+      flags: isObj(tut.flags) ? tut.flags : {},
+      title: typeof tut.title === "string" ? tut.title : ""
+    };
     s.hero.level = clamp(int(s.hero.level, 1), 1, 99);
     s.hero.exp = Math.max(0, int(s.hero.exp, 0));
     s.progress.maxStage = clamp(int(s.progress.maxStage, 1), 1, G.TOTAL_STAGES + 1);
@@ -143,12 +161,35 @@
     return s;
   }
 
+  /* 예전 저장(무기 하나만 있던 v3)을 장착/강화 두 슬롯으로 옮긴다.
+     장착 슬롯을 같은 단계로 채워 기존 전투력이 그대로 유지된다. */
+  function migrateSave(obj) {
+    if (!isObj(obj)) return obj;
+    const old = isObj(obj.weapon) ? obj.weapon : null;
+    if (old && typeof old.level === "number" && !isObj(obj.forge)) {
+      obj.forge = {
+        level: clamp(int(old.level, 0), 0, G.MAX_LV),
+        pity: clamp(num(old.pity, 0), 0, 100),
+        protect: !!old.protect,
+        freeProtect: 0
+      };
+      if (!isObj(obj.equipped)) obj.equipped = { level: obj.forge.level };
+      console.info("[save] 장착/강화 슬롯으로 저장을 이전했습니다 (+" + obj.forge.level + ")");
+    }
+    delete obj.weapon;
+    if (!isObj(obj.tutorial)) obj._veteran = true;
+    return obj;
+  }
+  G.migrateSave = migrateSave;
+
   G.load = function () {
     let loaded = null;
     try {
       const raw = localStorage.getItem(G.SAVE_KEY);
-      if (raw) loaded = JSON.parse(raw);
+      if (raw) loaded = migrateSave(JSON.parse(raw));
     } catch (e) { loaded = null; }
+    const veteran = !!(loaded && loaded._veteran);
+    if (loaded) delete loaded._veteran;
 
     if (!loaded) {
       for (const key of G.LEGACY_KEYS) {
@@ -159,17 +200,19 @@
           if (!old) continue;
           const fresh = defaults();
           fresh.gold = clamp(int(old.gold, 1200), 0, Number.MAX_SAFE_INTEGER);
-          fresh.weapon.level = clamp(int(old.level, 0), 0, G.MAX_LV);
-          fresh.weapon.pity = clamp(num(old.pity, 0), 0, 100);
+          fresh.forge.level = clamp(int(old.level, 0), 0, G.MAX_LV);
+          fresh.forge.pity = clamp(num(old.pity, 0), 0, 100);
+          fresh.equipped.level = fresh.forge.level;
           fresh.upgrades = Object.assign(fresh.upgrades, old.upgrades || {});
           if (old.stats) {
             fresh.stats.maxLv = clamp(int(old.stats.maxLv, 0), 0, G.MAX_LV);
             fresh.stats.tries = Math.max(0, int(old.stats.tries, 0));
             fresh.stats.breaks = Math.max(0, int(old.stats.breaks, 0));
           }
-          fresh.hero.level = 1 + Math.floor(fresh.weapon.level / 2);
+          fresh.hero.level = 1 + Math.floor(fresh.forge.level / 2);
           fresh.hero.hp = hpCapOf(fresh);
           fresh.welcomeSeen = true;
+          fresh.tutorial.skipped = true;   // 예전 플레이어에게는 안내 퀘스트를 띄우지 않는다
           loaded = fresh;
           console.info("[save] 예전 대장간 저장을 이어받았어요");
           break;
@@ -179,6 +222,7 @@
 
     state = sanitize(mergeDeep(defaults(), loaded || {}));
     if (!loaded) state.welcomeSeen = false;
+    if (veteran) state.tutorial.skipped = true;
     state.lastSeen = num(loaded && loaded.lastSeen, Date.now());
     G.state = state;
     return state;
@@ -215,10 +259,14 @@
     try {
       const parsed = JSON.parse(text);
       const data = parsed && parsed.data ? parsed.data : parsed;
-      if (!isObj(data) || !isObj(data.weapon) || !isObj(data.hero)) {
+      if (!isObj(data) || (!isObj(data.forge) && !isObj(data.weapon)) || !isObj(data.hero)) {
         return { ok: false, reason: "이 파일은 심연의 대장간 저장 파일이 아닙니다." };
       }
-      state = sanitize(mergeDeep(defaults(), data));
+      const src = migrateSave(data);
+      const veteran = !!src._veteran;
+      delete src._veteran;
+      state = sanitize(mergeDeep(defaults(), src));
+      if (veteran) state.tutorial.skipped = true;
       state.hero.hp = Math.min(state.hero.hp, hpCapOf(state));
       G.state = state;
       G.battle = null;
@@ -240,9 +288,14 @@
   };
 
   /* ---------------- 계산 ---------------- */
-  G.weaponAtk = function (lv) {
-    lv = num(lv, state.weapon.level);
+  G.atkAt = function (lv) {
+    lv = clamp(int(lv, 0), 0, G.MAX_LV);
     return Math.round(10 + 7 * lv + 2.2 * Math.pow(lv, 1.85));
+  };
+  /* 인자를 비우면 '장착 슬롯' 기준 — 사냥 전투력은 언제나 장착검을 쓴다 */
+  G.weaponAtk = function (lv) {
+    if (lv === undefined || lv === null) lv = state.equipped.level;
+    return G.atkAt(lv);
   };
 
   G.relicTotal = function (stat) {
@@ -282,23 +335,27 @@
   };
 
   G.enhanceCost = function (lv) {
-    lv = num(lv, state.weapon.level);
+    if (lv === undefined || lv === null) lv = state.forge.level;
+    lv = num(lv, 0);
     const cost = G.FORGE.baseCost * Math.pow(G.FORGE.costGrowth, lv) * Math.pow(0.95, state.upgrades.skill);
     return Math.round(Math.min(G.FORGE.maxCost, cost));
   };
 
   G.sellPrice = function (lv) {
-    lv = num(lv, state.weapon.level);
+    if (lv === undefined || lv === null) lv = state.forge.level;
+    lv = num(lv, 0);
     return Math.round(G.FORGE.sellBase * Math.pow(G.FORGE.sellGrowth, lv));
   };
 
   G.protectCost = function (lv) {
-    lv = num(lv, state.weapon.level);
+    if (lv === undefined || lv === null) lv = state.forge.level;
+    lv = num(lv, 0);
     return Math.round(G.FORGE.protectBase * Math.pow(G.FORGE.protectGrowth, Math.max(0, lv - 10)));
   };
 
   G.rates = function (lv) {
-    lv = num(lv, state.weapon.level);
+    if (lv === undefined || lv === null) lv = state.forge.level;
+    lv = num(lv, 0);
     const st = G.heroStats();
     let success;
     if (lv < 3) success = 100;
@@ -323,7 +380,8 @@
   };
 
   G.tierOf = function (lv) {
-    lv = num(lv, state.weapon.level);
+    if (lv === undefined || lv === null) lv = state.equipped.level;
+    lv = num(lv, 0);
     let t = G.TIERS[0];
     for (const row of G.TIERS) if (lv >= row.min) t = row;
     return t;
@@ -395,78 +453,196 @@
     return sk.power + sk.perLevel * ups;
   };
 
-  /* ---------------- 강화 ---------------- */
+  /* ---------------- 강화 (강화 슬롯만 건드린다) ---------------- */
   G.enhance = function () {
-    const lv = state.weapon.level;
+    const f = state.forge;
+    const lv = f.level;
     if (lv >= G.MAX_LV) return { ok: false, reason: "max" };
-    const canProtect = lv >= G.FORGE.breakStartLv && state.weapon.protect;
-    const cost = G.enhanceCost(lv) + (canProtect ? G.protectCost(lv) : 0);
+    const canProtect = lv >= G.FORGE.breakStartLv && f.protect;
+    const freeToken = canProtect && f.freeProtect > 0;
+    const cost = G.enhanceCost(lv) + (canProtect && !freeToken ? G.protectCost(lv) : 0);
     if (state.gold < cost) return { ok: false, reason: "gold", cost };
 
     state.gold -= cost;
+    if (freeToken) f.freeProtect = Math.max(0, f.freeProtect - 1);
     state.stats.tries += 1;
     const rates = G.rates(lv);
-    const pityReady = state.weapon.pity >= 100;
+    const pityReady = f.pity >= 100;
     let result;
 
     if (pityReady) {
-      state.weapon.pity = 0;
-      state.weapon.level += 1;
-      result = { kind: "pity", from: lv, to: state.weapon.level };
+      f.pity = 0;
+      f.level += 1;
+      result = { kind: "pity", from: lv, to: f.level };
     } else {
       const roll = Math.random() * 100;
       if (roll < rates.success) {
-        state.weapon.level += 1;
+        f.level += 1;
         state.stats.successes += 1;
-        result = { kind: "success", from: lv, to: state.weapon.level };
+        result = { kind: "success", from: lv, to: f.level };
       } else {
         const gain = (G.FORGE.pityGainBase + lv * G.FORGE.pityGainPerLv) * (1 + state.upgrades.pity * 0.25);
-        state.weapon.pity = Math.min(100, state.weapon.pity + gain);
+        f.pity = Math.min(100, f.pity + gain);
         if (roll < rates.success + rates.down) {
-          state.weapon.level = Math.max(0, lv - 1);
-          result = { kind: "down", from: lv, to: state.weapon.level, pity: gain };
+          f.level = Math.max(0, lv - 1);
+          result = { kind: "down", from: lv, to: f.level, pity: gain };
         } else if (rates.breakRate <= 0) {
           // 파괴 구간이 아니면 단계 유지
           result = { kind: "maintain", from: lv, to: lv, pity: gain };
         } else if (canProtect) {
-          result = { kind: "protected", from: lv, to: lv, pity: gain };
+          result = { kind: "protected", from: lv, to: lv, pity: gain, freeToken: freeToken };
         } else {
-          state.weapon.level = 0;
+          f.level = 0;
           state.stats.breaks += 1;
           result = { kind: "break", from: lv, to: 0, pity: gain };
         }
       }
     }
 
-    state.stats.maxLv = Math.max(state.stats.maxLv, state.weapon.level);
+    state.stats.maxLv = Math.max(state.stats.maxLv, f.level, state.equipped.level);
     result.cost = cost;
-    result.level = state.weapon.level;
-    result.weaponName = G.WEAPONS[Math.min(G.MAX_LV, state.weapon.level)];
+    result.level = f.level;
+    result.equippedLv = state.equipped.level;
+    result.freeTokenUsed = !!freeToken;
+    result.weaponName = G.WEAPONS[Math.min(G.MAX_LV, f.level)];
     G.save();
     emit("forge:result", result);
+    tutorialEmit();
     checkAchievements();
     return Object.assign({ ok: true }, result);
   };
 
   G.sell = function () {
-    const lv = state.weapon.level;
+    const f = state.forge;
+    const lv = f.level;
     const price = G.sellPrice(lv);
     if (lv <= 0) return { ok: false, reason: "nothing" };
     state.gold += price;
     state.stats.goldEarned += price;
     state.stats.sells += 1;
-    state.weapon.level = 0;
+    f.level = 0;
     G.save();
-    G.log(`💰 +${lv} ${G.WEAPONS[lv]}을(를) 매각해 ${G.fmt(price)} 골드를 받았습니다.`);
-    emit("forge:sell", { price, from: lv });
+    G.log(`💰 +${lv} ${G.WEAPONS[lv]}을(를) 매각해 ${G.fmt(price)} 골드를 받았습니다. 장착 중인 +${state.equipped.level} 검은 그대로입니다.`);
+    emit("forge:sell", { price, from: lv, equippedLv: state.equipped.level });
+    tutorialEmit();
     checkAchievements();
     return { ok: true, price };
   };
 
   G.toggleProtect = function (on) {
-    state.weapon.protect = !!on;
+    state.forge.protect = !!on;
     G.save();
   };
+
+  /* ---------------- 장착 (슬롯 교체) ---------------- */
+  /* 장착 슬롯 ↔ 강화 슬롯을 서로 바꾼다.
+     강화 슬롯의 검이 부서져도 장착 슬롯은 건드리지 않으므로
+     보조검·신검을 벼리다가 최고 검을 잃는 일이 없다. */
+  G.equip = function () {
+    const e = state.equipped;
+    const f = state.forge;
+    const before = { equipped: e.level, forge: f.level };
+    e.level = clamp(int(f.level, 0), 0, G.MAX_LV);
+    f.level = clamp(int(before.equipped, 0), 0, G.MAX_LV);
+    state.stats.maxLv = Math.max(state.stats.maxLv, e.level, f.level);
+    if (!isObj(state.tutorial.flags)) state.tutorial.flags = {};
+    state.tutorial.flags.equipped = true;
+    const st = G.heroStats();
+    state.hero.hp = Math.min(state.hero.hp, st.maxHp);
+    G.save();
+    G.log(`⚔ +${e.level} ${G.WEAPONS[e.level]}을(를) 장착했습니다. (강화 슬롯에 +${f.level} 보관)`, "level");
+    emit("forge:equip", { level: e.level, stored: f.level, before });
+    tutorialEmit();
+    checkAchievements();
+    return { ok: true, level: e.level, stored: f.level, previous: before.equipped };
+  };
+
+  /* ---------------- 초보자 안내 퀘스트 ---------------- */
+  function tutorialGoalMet(id) {
+    const t = state.tutorial || {};
+    const flags = t.flags || {};
+    switch (id) {
+      case "forge": return state.stats.tries >= 1;
+      case "equip": return !!flags.equipped;
+      case "hunt": return !!state.progress.cleared["1-1"];
+      case "relic":
+        return Object.keys(state.relics).some((k) => state.relics[k] && state.relics[k].u) ||
+          (int(state.upgrades.skill, 0) + int(state.upgrades.pity, 0) +
+            int(state.upgrades.furnace, 0) + int(state.upgrades.pickaxe, 0)) > 0;
+      default: return false;
+    }
+  }
+  G.tutorialGoalMet = tutorialGoalMet;
+
+  G.tutorialState = function () {
+    const t = state.tutorial;
+    const total = G.TUTORIAL.length;
+    const idx = clamp(int(t.idx, 0), 0, total);
+    const done = idx >= total;
+    const cur = done ? null : G.TUTORIAL[idx];
+    return {
+      idx, total, done,
+      skipped: !!t.skipped,
+      collapsed: !!t.collapsed,
+      title: t.title || "",
+      cur,
+      goalMet: cur ? tutorialGoalMet(cur.id) : true,
+      steps: G.TUTORIAL.map((st, i) => ({
+        id: st.id, title: st.title, goal: st.goal, icon: st.icon, reward: st.reward,
+        claimed: !!t.claimed[st.id],
+        met: tutorialGoalMet(st.id),
+        current: i === idx
+      }))
+    };
+  };
+
+  G.claimTutorial = function () {
+    const t = state.tutorial;
+    const cur = G.TUTORIAL[t.idx];
+    if (!cur) return { ok: false, reason: "done" };
+    if (!tutorialGoalMet(cur.id)) return { ok: false, reason: "notyet" };
+    t.claimed[cur.id] = Date.now();
+    const rw = cur.reward || {};
+    if (rw.gold) addGold(rw.gold);
+    if (rw.stones) addStones(rw.stones);
+    if (rw.frags) addFrags(rw.frags);
+    if (rw.protect) state.forge.freeProtect = Math.min(99, int(state.forge.freeProtect, 0) + rw.protect);
+    if (rw.title) t.title = rw.title;
+    t.idx = clamp(t.idx + 1, 0, G.TUTORIAL.length);
+    const finished = t.idx >= G.TUTORIAL.length;
+    G.save();
+    G.log(`🎓 안내 퀘스트 [${cur.title}] 완료! 보상을 받았습니다.`, "achv");
+    emit("tutorial:claim", { step: cur, reward: rw, finished });
+    tutorialEmit();
+    return { ok: true, reward: rw, step: cur, finished };
+  };
+
+  G.setTutorialCollapsed = function (on) {
+    state.tutorial.collapsed = !!on;
+    G.save();
+    tutorialEmit();
+  };
+
+  G.skipTutorial = function () {
+    state.tutorial.skipped = true;
+    G.save();
+    tutorialEmit();
+  };
+
+  G.restartTutorial = function () {
+    state.tutorial = {
+      idx: 0, claimed: {}, skipped: false, collapsed: false,
+      flags: (state.tutorial && state.tutorial.flags) || {}, title: ""
+    };
+    G.save();
+    tutorialEmit();
+    return G.tutorialState();
+  };
+
+  function tutorialEmit() {
+    emit("tutorial:update", {});
+  }
+  G.tutorialRefresh = tutorialEmit;
 
   G.buyUpgrade = function (key) {
     const cfg = G.FORGE_UPGRADES.find((u) => u.key === key);
@@ -479,6 +655,7 @@
     G.save();
     G.log(`🔨 [${cfg.name}] Lv.${state.upgrades[key]} 연구 완료!`);
     emit("forge:upgrade", { key, level: state.upgrades[key] });
+    tutorialEmit();
     checkAchievements();
     return { ok: true, level: state.upgrades[key] };
   };
@@ -513,6 +690,7 @@
     G.save();
     G.log(`🔮 유물 [${r.name}]을(를) 각성했습니다!`, "relic");
     emit("relic:unlock", { relic: r });
+    tutorialEmit();
     checkAchievements();
     return { ok: true };
   };
@@ -532,6 +710,7 @@
     G.save();
     G.log(`🔮 [${r.name}] Lv.${cur.lv} 강화! ${r.text(r.effect * cur.lv)}`, "relic");
     emit("relic:level", { relic: r, level: cur.lv });
+    tutorialEmit();
     checkAchievements();
     return { ok: true, level: cur.lv };
   };
@@ -680,9 +859,11 @@
       waveIndex: 0,
       enemyIndex: 0,
       enemy: null,
+      hero: newHeroPos(),
+      zones: [],
       auto: state.settings.auto !== false,
-      heroTimer: 0.35,
-      enemyTimer: 1.1,
+      heroTimer: 0.45,
+      enemyTimer: 1.2,
       tapCd: 0,
       cds: {},
       combo: 0,
@@ -702,12 +883,30 @@
     const wave = b.waves[b.waveIndex];
     const monId = wave.monsters[b.enemyIndex];
     b.enemy = enemyFor(b.stage, monId, wave.boss);
-    b.enemyTimer = 0.9;
-    b.heroTimer = 0.3;
+    b.enemyTimer = 1.0;
+    b.heroTimer = 0.4;
+    placeSpawn(b.enemy, b);
     emit("battle:enemy", {
       enemy: b.enemy, wave: b.waveIndex + 1, index: b.enemyIndex,
       total: wave.monsters.length, boss: wave.boss
     });
+  }
+
+  /* 새 몬스터를 영웅 반대편에서 걸어 들어오게 배치한다 */
+  function placeSpawn(e, b) {
+    const h = b.hero || (b.hero = newHeroPos());
+    if (e.boss) {
+      e.x = h.x < 50 ? 80 : 20;
+      e.y = 26 + Math.random() * 10;
+    } else {
+      const side = Math.random() < 0.55 ? 1 : -1;
+      e.x = clamp(h.x + side * (34 + Math.random() * 26), 4, 96);
+      e.y = clamp(h.y + (Math.random() * 56 - 28), 10, 90);
+    }
+    e.face = e.x < h.x ? 1 : -1;
+    e.speed = (e.boss ? 4.4 : 8.4) + b.stage.world * 0.85;
+    e.moving = false;
+    e.spawnT = 0.45;
   }
 
   function damageEnemy(mult, opts) {
@@ -857,6 +1056,7 @@
     G.battle = null;
     G.save();
     emit("battle:victory", result);
+    tutorialEmit();
     G.log(`🎉 ${stage.label} ${stage.name} 정복! (+${G.fmt(gold)}골드${stage.isBoss ? " · 지배자 격파" : ""})`, "win");
     checkAchievements();
   }
@@ -894,13 +1094,7 @@
   };
 
   G.tapAttack = function () {
-    const b = G.battle;
-    if (!b || b.over || !b.enemy) return { ok: false };
-    if (b.tapCd > 0) return { ok: false, reason: "cooldown" };
-    b.tapCd = 0.3;
-    b.heroTimer = Math.min(b.heroTimer, 0.25);
-    damageEnemy(1.0, { tap: true });
-    return { ok: true };
+    return G.arena.attack();
   };
 
   G.setAuto = function (on) {
@@ -909,7 +1103,7 @@
     G.save();
   };
 
-  /* ---------------- 보스 패턴 ---------------- */
+  /* ---------------- 보스 패턴 (지면 경고판) ---------------- */
   function startBossPattern() {
     const b = G.battle;
     const e = b && b.enemy;
@@ -920,15 +1114,35 @@
     e.patternIdx += 1;
     const pat = G.PATTERNS[id];
     if (!pat) return;
+    const h = b.hero;
     if (pat.action === "counter") {
       e.pattern = { id: id, phase: "active", timer: pat.duration, total: pat.duration, responded: false };
       e.shield = true;
       emit("battle:pattern", { pattern: pat, phase: "active", total: pat.duration, enemy: e });
-    } else {
-      const tel = Math.max(1.35, pat.telegraph - b.stage.world * 0.045);
-      e.pattern = { id: id, phase: "telegraph", timer: tel, total: tel, responded: false };
-      emit("battle:pattern", { pattern: pat, phase: "telegraph", total: tel, enemy: e });
+      return;
     }
+    const tel = Math.max(1.35, pat.telegraph - b.stage.world * 0.045);
+    e.pattern = { id: id, phase: "telegraph", timer: tel, total: tel, responded: false };
+    // 바닥에 붉은 위험 지대를 먼저 뿌린다 — 그 사이에 움직이면 피할 수 있다
+    let zone = null;
+    if (pat.action === "guard") {
+      zone = { id: "z" + (++zoneSeq), kind: "circle", x: h.x, y: h.y, r: 15.5, w: 0, t: tel, total: tel, patternId: id };
+    } else if (pat.action === "dodge") {
+      const dx = h.x - e.x, dy = h.y - e.y;
+      const len = Math.hypot(dx, dy) || 1;
+      zone = {
+        id: "z" + (++zoneSeq), kind: "lane",
+        x1: e.x, y1: e.y,
+        x2: h.x + (dx / len) * 16, y2: h.y + (dy / len) * 16,
+        w: 11, t: tel, total: tel, patternId: id
+      };
+    }
+    if (zone) {
+      b.zones = b.zones || [];
+      b.zones.push(zone);
+      e.pattern.zone = zone;
+    }
+    emit("battle:pattern", { pattern: pat, phase: "telegraph", total: tel, enemy: e, zone });
   }
 
   function resolveBossPattern() {
@@ -937,14 +1151,18 @@
     if (!e || !e.pattern) return;
     const pat = G.PATTERNS[e.pattern.id];
     const responded = e.pattern.responded;
+    const zone = e.pattern.zone;
     const st = G.heroStats();
+    const inZone = zone ? zoneContains(zone, b.hero) : true;
     let dmg = Math.max(1, Math.round(e.atk * pat.mult));
     if (responded) dmg = Math.round(dmg * pat.reduce);
+    if (!inZone) dmg = 0;                       // 붉은 지대 밖으로 피했다
+    if (zone) zone.t = 0;
     if (dmg > 0) {
       state.hero.hp = Math.max(0, state.hero.hp - dmg);
     }
     emit("battle:patternResolve", {
-      pattern: pat, responded: responded, dmg: dmg,
+      pattern: pat, responded: responded, dmg: dmg, dodged: !inZone,
       heroHp: state.hero.hp, heroMaxHp: st.maxHp
     });
     e.pattern = null;
@@ -985,6 +1203,254 @@
     return { ok: true, kind: action };
   };
 
+  /* =================================================================
+     실시간 전장 (이동 · 조준 · 지면 경고)
+     필드 좌표: x 0(왼쪽)~100(오른쪽), y 0(멀리)~100(가까이)
+     ================================================================= */
+  const FIELD = {
+    heroSpeed: 31,
+    depthRatio: 0.66,      // 깊이 방향 이동은 원근 때문에 느리게
+    dashSpeed: 108,
+    dashTime: 0.19,
+    dashCd: 1.0,
+    heroRange: 13,
+    enemyRange: 11
+  };
+  G.FIELD = FIELD;
+  let zoneSeq = 0;
+
+  function newHeroPos() {
+    return {
+      x: 28, y: 74, face: 1, mx: 0, my: 0, moving: false,
+      manualT: 0, dashT: 0, dashCd: 0, dashDx: 1, dashDy: 0,
+      iframe: 0, swing: 0, chaseT: 0
+    };
+  }
+
+  G.fieldDist = function (a, b) {
+    if (!a || !b) return 999;
+    const dx = a.x - b.x;
+    const dy = (a.y - b.y) * 1.15;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+
+  function zoneContains(z, p) {
+    if (!z || !p) return false;
+    if (z.kind === "circle") {
+      return G.fieldDist({ x: p.x, y: p.y }, { x: z.x, y: z.y }) <= z.r;
+    }
+    if (z.kind === "lane") {
+      const vx = z.x2 - z.x1;
+      const vy = (z.y2 - z.y1) * 1.15;
+      const wx = p.x - z.x1;
+      const wy = (p.y - z.y1) * 1.15;
+      const denom = vx * vx + vy * vy || 1;
+      let t = (wx * vx + wy * vy) / denom;
+      t = Math.max(0, Math.min(1, t));
+      const px = z.x1 + vx * t;
+      const py = z.y1 + (z.y2 - z.y1) * t;
+      return G.fieldDist({ x: p.x, y: p.y }, { x: px, y: py }) <= z.w / 2;
+    }
+    return false;
+  }
+  G.zoneContains = zoneContains;
+
+  /* 가장 가까운 위험 지대 (자동 회피용) */
+  function dangerZone(b, p) {
+    if (!b.zones) return null;
+    let best = null, bestD = 1e9;
+    b.zones.forEach((z) => {
+      if (z.t <= 0) return;
+      let d;
+      if (z.kind === "circle") d = G.fieldDist(p, { x: z.x, y: z.y }) - z.r;
+      else d = G.fieldDist(p, { x: (z.x1 + z.x2) / 2, y: (z.y1 + z.y2) / 2 }) - z.w;
+      if (d < bestD) { bestD = d; best = z; }
+    });
+    return bestD < 10 ? best : null;
+  }
+
+  function moveStep(o, dx, dy, speed, dt) {
+    const l = Math.hypot(dx, dy) || 1;
+    o.x = clamp(o.x + (dx / l) * speed * dt, 4, 96);
+    o.y = clamp(o.y + (dy / l) * speed * FIELD.depthRatio * dt, 8, 96);
+  }
+
+  G.arena = {
+    setMove(dx, dy) {
+      const b = G.battle;
+      const h = b && b.hero;
+      if (!h) return;
+      const len = Math.hypot(dx, dy);
+      if (len > 1) { dx /= len; dy /= len; }
+      h.mx = dx; h.my = dy;
+      if (Math.hypot(dx, dy) > 0.08) h.manualT = 1.4;
+    },
+
+    dash() {
+      const b = G.battle;
+      const h = b && b.hero;
+      if (!b || !h || b.over) return { ok: false, reason: "none" };
+      if (h.dashCd > 0) return { ok: false, reason: "cooldown", cd: h.dashCd };
+      let dx = h.mx, dy = h.my;
+      if (Math.hypot(dx, dy) < 0.12) {
+        const e = b.enemy;
+        if (e) { dx = h.x - e.x; dy = h.y - e.y; }
+        else { dx = h.face > 0 ? -1 : 1; dy = 0; }
+      }
+      const l = Math.hypot(dx, dy) || 1;
+      h.dashDx = dx / l; h.dashDy = dy / l;
+      h.dashT = FIELD.dashTime;
+      h.dashCd = FIELD.dashCd;
+      h.iframe = FIELD.dashTime + 0.14;
+      h.face = h.dashDx < 0 ? -1 : 1;
+      emit("battle:dash", { dx: h.dashDx, dy: h.dashDy });
+      return { ok: true };
+    },
+
+    attack() {
+      const b = G.battle;
+      const h = b && b.hero;
+      if (!b || b.over || !b.enemy) return { ok: false, reason: "none" };
+      if (b.tapCd > 0) return { ok: false, reason: "cooldown" };
+      const dist = G.fieldDist(h, b.enemy);
+      if (dist > FIELD.heroRange) {
+        h.chaseT = 1.0;                       // 사거리 밖이면 파고든다
+        h.face = b.enemy.x < h.x ? -1 : 1;
+        return { ok: true, chase: true };
+      }
+      b.tapCd = 0.26;
+      h.swing = 0.3;
+      h.face = b.enemy.x < h.x ? -1 : 1;
+      damageEnemy(1.0, { tap: true });
+      return { ok: true };
+    },
+
+    /* 영웅·몬스터 이동과 공격 판정 (프레임마다) */
+    step(dt) {
+      const b = G.battle;
+      if (!b || b.over) return;
+      const h = b.hero || (b.hero = newHeroPos());
+      const e = b.enemy;
+      const st = G.heroStats();
+
+      h.manualT = Math.max(0, h.manualT - dt);
+      h.dashCd = Math.max(0, h.dashCd - dt);
+      h.iframe = Math.max(0, h.iframe - dt);
+      h.swing = Math.max(0, h.swing - dt);
+      h.chaseT = Math.max(0, h.chaseT - dt);
+
+      const manual = Math.hypot(h.mx, h.my) > 0.08;
+
+      if (h.dashT <= 0) {
+        if (manual) {
+          moveStep(h, h.mx, h.my, FIELD.heroSpeed, dt);
+          h.moving = true;
+          h.face = h.mx < 0 ? -1 : 1;
+        } else if (b.auto && e && h.manualT <= 0) {
+          const zone = dangerZone(b, h);
+          const dist = G.fieldDist(h, e);
+          if (zone) {
+            // 붉은 지대 밖으로
+            const cx = zone.kind === "circle" ? zone.x : (zone.x1 + zone.x2) / 2;
+            const cy = zone.kind === "circle" ? zone.y : (zone.y1 + zone.y2) / 2;
+            let ax = h.x - cx, ay = h.y - cy;
+            if (Math.hypot(ax, ay * 1.15) < 2) { ax = h.x < 50 ? -1 : 1; ay = 0; }
+            moveStep(h, ax, ay, FIELD.heroSpeed * 1.2, dt);
+            h.moving = true;
+            h.face = ax < 0 ? -1 : 1;
+          } else if (dist > FIELD.heroRange * 0.82) {
+            moveStep(h, e.x - h.x, e.y - h.y, FIELD.heroSpeed, dt);
+            h.moving = true;
+            h.face = e.x < h.x ? -1 : 1;
+          } else if (dist < FIELD.heroRange * 0.45) {
+            moveStep(h, h.x - e.x, h.y - e.y, FIELD.heroSpeed * 0.7, dt);
+            h.moving = true;
+            h.face = e.x < h.x ? -1 : 1;
+          } else {
+            h.moving = false;
+            h.face = e.x < h.x ? -1 : 1;
+          }
+        } else if (h.chaseT > 0 && e) {
+          moveStep(h, e.x - h.x, e.y - h.y, FIELD.heroSpeed, dt);
+          h.moving = true;
+          h.face = e.x < h.x ? -1 : 1;
+        } else {
+          h.moving = false;
+        }
+      }
+
+      // 대시
+      if (h.dashT > 0) {
+        h.dashT = Math.max(0, h.dashT - dt);
+        h.x = clamp(h.x + h.dashDx * FIELD.dashSpeed * dt, 3, 97);
+        h.y = clamp(h.y + h.dashDy * FIELD.dashSpeed * FIELD.depthRatio * dt, 6, 97);
+        h.moving = true;
+      }
+
+      // 몬스터: 쫓아오고, 사거리에 들어오면 때린다
+      if (e) {
+        e.spawnT = Math.max(0, (e.spawnT || 0) - dt);
+        if (e.stun > 0) {
+          e.moving = false;
+        } else {
+          const telegraphing = e.pattern && e.pattern.phase === "telegraph";
+          const dist = G.fieldDist(h, e);
+          if (!telegraphing && dist > FIELD.enemyRange * 0.8) {
+            moveStep(e, h.x - e.x, h.y - e.y, e.speed || 9, dt);
+            e.moving = true;
+            e.face = h.x < e.x ? -1 : 1;
+          } else {
+            e.moving = false;
+            e.face = h.x < e.x ? -1 : 1;
+          }
+          if (!telegraphing && e.spawnT <= 0) {
+            b.enemyTimer -= dt;
+            if (b.enemyTimer <= 0 && dist <= FIELD.enemyRange + 1.5 && h.iframe <= 0) {
+              enemyAttack();
+              if (G.battle !== b) return;
+            }
+          }
+        }
+      }
+
+      // 영웅 자동 공격
+      if (b.auto && e && G.battle === b && h.dashT <= 0 && h.manualT <= 0) {
+        b.heroTimer -= dt;
+        if (b.heroTimer <= 0 && G.fieldDist(h, e) <= FIELD.heroRange) {
+          b.heroTimer = st.attackInterval;
+          h.swing = 0.3;
+          h.face = e.x < h.x ? -1 : 1;
+          heroAttack();
+          if (G.battle !== b) return;
+        }
+      } else if (b.heroTimer > 0) {
+        b.heroTimer = Math.max(0, b.heroTimer - dt * 0.5);
+      }
+
+      // 위험 지대 수명
+      if (b.zones && b.zones.length) {
+        b.zones.forEach((z) => { z.t = Math.max(0, z.t - dt); });
+        b.zones = b.zones.filter((z) => z.t > 0 || (b.enemy && b.enemy.pattern && b.enemy.pattern.zone === z));
+      }
+    }
+  };
+
+  /* 자동 모드: 기술도 스스로 쓴다 */
+  function autoSkills(b) {
+    if (!b.auto || !G.battle) return;
+    const st = G.heroStats();
+    const e = b.enemy;
+    const dist = e ? G.fieldDist(b.hero, e) : 999;
+    G.SKILLS.forEach((sk) => {
+      if (!G.skillUnlocked(sk) || (b.cds[sk.id] || 0) > 0) return;
+      if (sk.type === "heal") {
+        if (state.hero.hp / st.maxHp < 0.55) G.useSkill(sk.id);
+      } else if (dist <= 34) {
+        G.useSkill(sk.id);
+      }
+    });
+  }
+
   /* ---------------- 프레임 틱 ---------------- */
   G.tick = function (dt) {
     dt = clamp(num(dt, 0), 0, 1.5);
@@ -994,12 +1460,13 @@
     if (b && !b.over) {
       b.tapCd = Math.max(0, b.tapCd - dt);
       G.SKILLS.forEach((sk) => { b.cds[sk.id] = Math.max(0, (b.cds[sk.id] || 0) - dt); });
+      if (!b.hero) b.hero = newHeroPos();
 
       // 다음 몬스터 스폰 대기
       if (!b.enemy) {
         b.spawnTimer = Math.max(0, (b.spawnTimer || 0) - dt);
         if (b.spawnTimer <= 0 && !b.over) spawnEnemy();
-        return;
+        if (!b.enemy) return;
       }
 
       const e = b.enemy;
@@ -1011,49 +1478,37 @@
           e.interval = Math.max(1.1, e.interval * 0.78);
           emit("battle:enrage", { enemy: e });
         }
-        // 스턴
+
+        // 이동 · 조준 · 공격 판정
+        G.arena.step(dt);
+        if (G.battle !== b || b.over) return;
+
+        // 패턴 진행
         if (e.stun > 0) {
           e.stun = Math.max(0, e.stun - dt);
-        } else {
-          // 패턴 진행
-          if (e.pattern) {
-            e.pattern.timer = Math.max(0, e.pattern.timer - dt);
-            emit("battle:patternTick", {
-              patternId: e.pattern.id, phase: e.pattern.phase,
-              timer: e.pattern.timer, total: e.pattern.total, responded: e.pattern.responded
-            });
-            if (e.pattern.timer <= 0) {
-              if (e.pattern.phase === "telegraph") resolveBossPattern();
-              else if (e.pattern.phase === "active") {
-                e.shield = false;
-                e.pattern = null;
-                e.patternCd = Math.max(4.5, 8.5 - b.stage.world * 0.18);
-                emit("battle:patternEnd", {});
-              }
+        } else if (e.pattern) {
+          e.pattern.timer = Math.max(0, e.pattern.timer - dt);
+          emit("battle:patternTick", {
+            patternId: e.pattern.id, phase: e.pattern.phase,
+            timer: e.pattern.timer, total: e.pattern.total, responded: e.pattern.responded
+          });
+          if (e.pattern.timer <= 0) {
+            if (e.pattern.phase === "telegraph") resolveBossPattern();
+            else if (e.pattern.phase === "active") {
+              e.shield = false;
+              e.pattern = null;
+              e.patternCd = Math.max(4.5, 8.5 - b.stage.world * 0.18);
+              emit("battle:patternEnd", {});
             }
-          } else if (e.boss) {
-            e.patternCd -= dt;
-            if (e.patternCd <= 0) startBossPattern();
+            if (G.battle !== b || b.over) return;
           }
-
-          // 영웅은 계속 공격, 보스는 텔레그래프 중 일반 공격을 멈춤
-          if (b.auto) {
-            b.heroTimer -= dt;
-            if (b.heroTimer <= 0) {
-              b.heroTimer = G.heroStats().attackInterval;
-              heroAttack();
-              if (!G.battle || G.battle !== b) return;
-            }
-          }
-          const telegraphing = e.pattern && e.pattern.phase === "telegraph";
-          if (!telegraphing) {
-            b.enemyTimer -= dt;
-            if (b.enemyTimer <= 0) {
-              enemyAttack();
-              if (!G.battle || G.battle !== b) return;
-            }
-          }
+        } else if (e.boss) {
+          e.patternCd -= dt;
+          if (e.patternCd <= 0) startBossPattern();
+          if (G.battle !== b || b.over) return;
         }
+
+        autoSkills(b);
       }
       return;
     }
@@ -1128,10 +1583,21 @@
       return { gold: state.gold, stones: state.stones, frags: state.relFrags };
     },
     setWeapon(lv) {
-      state.weapon.level = clamp(int(lv, 0), 0, G.MAX_LV);
-      state.stats.maxLv = Math.max(state.stats.maxLv, state.weapon.level);
+      state.forge.level = clamp(int(lv, 0), 0, G.MAX_LV);
+      state.stats.maxLv = Math.max(state.stats.maxLv, state.forge.level, state.equipped.level);
       G.save();
-      return state.weapon.level;
+      return state.forge.level;
+    },
+    setEquipped(lv) {
+      state.equipped.level = clamp(int(lv, 0), 0, G.MAX_LV);
+      state.stats.maxLv = Math.max(state.stats.maxLv, state.forge.level, state.equipped.level);
+      state.hero.hp = Math.min(state.hero.hp, G.heroStats().maxHp);
+      G.save();
+      return state.equipped.level;
+    },
+    resetTutorial() {
+      G.restartTutorial();
+      return G.tutorialState().idx;
     },
     setHero(lv) {
       state.hero.level = clamp(int(lv, 1), 1, 99);

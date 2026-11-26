@@ -270,7 +270,7 @@
       $("jcGo").textContent = "완료";
       $("jcSub").textContent = "최고의 대장장이";
     }
-    $("jcWeapon").textContent = "+" + s.weapon.level;
+    $("jcWeapon").textContent = "+" + s.equipped.level;
     $("jcHero").textContent = "Lv." + s.hero.level;
     $("jcRelics").textContent = String(relicLv);
     $("jcCodex").textContent = `${Object.keys(s.codex).length}/${Object.keys(G.MONSTERS).length}`;
@@ -473,7 +473,7 @@
       btn.classList.toggle("done", !!(patNow && patNow.responded));
     });
 
-    $("biWeapon").textContent = "+" + S().weapon.level;
+    $("biWeapon").textContent = "+" + S().equipped.level;
     $("biAtk").textContent = G.fmt(st.atk);
     $("biCrit").textContent = G.pct(st.critChance);
   }
@@ -528,18 +528,38 @@
 
   function renderForge() {
     const s = S();
-    const lv = s.weapon.level;
+    const lv = s.forge.level;
+    const eLv = s.equipped.level;
     const st = G.heroStats();
     const rates = G.rates(lv);
     const cost = G.enhanceCost(lv);
     const canProtect = lv >= G.FORGE.breakStartLv && lv < G.MAX_LV;
     const protCost = canProtect ? G.protectCost(lv) : 0;
-    const total = cost + (canProtect && s.weapon.protect ? protCost : 0);
+    const freeToken = canProtect && s.forge.freeProtect > 0;
+    const total = cost + (canProtect && s.forge.protect && !freeToken ? protCost : 0);
     const maxed = lv >= G.MAX_LV;
+
+    /* --- 장착 슬롯 / 강화 슬롯 보드 --- */
+    $("equippedLv").textContent = "+" + eLv;
+    $("equippedName").textContent = G.WEAPONS[Math.min(eLv, G.WEAPONS.length - 1)];
+    $("equippedAtk").textContent = `공격력 ${G.fmt(G.atkAt(eLv))}`;
+    $("forgeSlotLv").textContent = "+" + lv;
+    $("forgeSlotName").textContent = G.WEAPONS[Math.min(lv, G.WEAPONS.length - 1)];
+    $("forgeSlotAtk").textContent = `공격력 ${G.fmt(G.atkAt(lv))}`;
+
+    const eq = $("equipBtn");
+    eq.classList.toggle("ready", lv > eLv);
+    if (lv > eLv) eq.textContent = `⚔ +${lv} 검 장착하기`;
+    else if (lv === eLv) eq.textContent = eLv === 0 ? "⚔ 검 장착하기" : `⚔ +${lv} 검 장착 (교체)`;
+    else eq.textContent = `⚔ +${lv} 검 장착 (${eLv - lv}강 낮아짐)`;
+    eq.disabled = false;
+    $("equipNote").textContent = lv > eLv
+      ? `장착하면 사냥 공격력이 ${G.fmt(G.atkAt(eLv))} → ${G.fmt(G.atkAt(lv))} 로 올라갑니다. +${eLv} 검은 강화 슬롯에 보관됩니다.`
+      : `장착하면 두 검이 자리를 바꿉니다. 강화 중 검이 부서져도 장착한 검은 그대로 남습니다.`;
 
     $("forgeLv").textContent = "+" + lv;
     $("forgeName").textContent = G.WEAPONS[Math.min(lv, G.WEAPONS.length - 1)];
-    $("forgeAtk").textContent = `무기 공격력 ${G.fmt(G.weaponAtk(lv))} · 총 공격력 ${G.fmt(st.atk)}`;
+    $("forgeAtk").textContent = `강화 슬롯 공격력 ${G.fmt(G.atkAt(lv))} · 장착 총 공격력 ${G.fmt(st.atk)}`;
     $("sellPrice").textContent = G.fmt(G.sellPrice(lv)) + " G";
 
     $("starRow").innerHTML = [5, 10, 15, 20, 25].map((step) =>
@@ -552,9 +572,9 @@
       forgeSwordLevel = lv;
     }
 
-    $("rateSuccess").textContent = maxed ? "MAX" : (s.weapon.pity >= 100 ? "확정!" : G.pct(rates.success));
-    $("rateDown").textContent = maxed || s.weapon.pity >= 100 ? "0%" : G.pct(rates.down);
-    $("rateBreak").textContent = maxed || s.weapon.pity >= 100 ? "0%" : G.pct(rates.breakRate);
+    $("rateSuccess").textContent = maxed ? "MAX" : (s.forge.pity >= 100 ? "확정!" : G.pct(rates.success));
+    $("rateDown").textContent = maxed || s.forge.pity >= 100 ? "0%" : G.pct(rates.down);
+    $("rateBreak").textContent = maxed || s.forge.pity >= 100 ? "0%" : G.pct(rates.breakRate);
     $("rateSuccess").parentNode.className = "rate-box good";
     $("rateDown").parentNode.className = "rate-box " + (rates.down > 25 ? "bad" : "warn");
     $("rateBreak").parentNode.className = "rate-box " + (rates.breakRate > 20 ? "bad" : "warn");
@@ -566,15 +586,17 @@
           ? "실패하면 한 단계 내려갑니다 (파괴 없음)"
           : "실패하면 검이 부서질 수 있습니다 · 봉인 부적으로 보호"));
 
-    $("pityText").textContent = G.pct(Math.min(100, s.weapon.pity));
-    $("pityFill").style.width = Math.min(100, s.weapon.pity) + "%";
+    $("pityText").textContent = G.pct(Math.min(100, s.forge.pity));
+    $("pityFill").style.width = Math.min(100, s.forge.pity) + "%";
 
-    $("protectRow").classList.toggle("off", !(canProtect && s.weapon.protect));
+    $("protectRow").classList.toggle("off", !(canProtect && s.forge.protect));
     const pt = $("protectToggle");
     pt.disabled = !canProtect;
-    pt.checked = canProtect ? !!s.weapon.protect : false;
+    pt.checked = canProtect ? !!s.forge.protect : false;
     $("protectCost").textContent = canProtect
-      ? `이번 강화에 ${G.fmt(protCost)} G 추가`
+      ? (s.forge.freeProtect > 0
+        ? `🛡 무료 봉인 부적 ${s.forge.freeProtect}장 사용 가능`
+        : `이번 강화에 ${G.fmt(protCost)} G 추가`)
       : (lv >= G.MAX_LV ? "최고 단계에서는 필요 없습니다" : "+10강부터 사용할 수 있습니다");
 
     const btn = $("enhanceBtn");
@@ -582,7 +604,7 @@
       btn.disabled = true;
       $("enhanceMain").textContent = "👑 성검 완성!";
       $("enhanceCost").textContent = "더 강화할 수 없어요";
-    } else if (s.weapon.pity >= 100) {
+    } else if (s.forge.pity >= 100) {
       btn.disabled = s.gold < total;
       $("enhanceMain").textContent = "🌑 원한 폭발!";
       $("enhanceCost").textContent = `${G.fmt(total)} G`;
@@ -642,6 +664,228 @@
     svg.classList.add(cls);
     setTimeout(() => svg.classList.remove(cls), 700);
   }
+  /* ===============================================================
+     초보자 안내 퀘스트 바
+     =============================================================== */
+  function renderQuest() {
+    const bar = $("questBar");
+    if (!bar) return;
+    const t = G.tutorialState();
+    const hide = t.skipped || t.done;
+    bar.classList.toggle("hidden", hide);
+    if (hide) { applyTutorialHighlight(); return; }
+
+    bar.classList.toggle("collapsed", t.collapsed);
+    $("qbStep").textContent = `${t.idx + 1}/${t.total}`;
+    $("qbTitle").textContent = `${t.cur.icon} ${t.cur.title}`;
+    $("qbGoal").textContent = t.cur.goal;
+    $("qbDots").innerHTML = t.steps.map((st) =>
+      `<i class="${st.claimed ? "done" : st.met ? "met" : ""}${st.current ? " current" : ""}"></i>`
+    ).join("");
+
+    const btn = $("qbClaim");
+    if (t.goalMet) {
+      btn.textContent = "🎁 보상 받기";
+      btn.classList.remove("going");
+    } else {
+      btn.textContent = "이동";
+      btn.classList.add("going");
+    }
+    btn.disabled = false;
+    const badge = $("heroBadge");
+    if (badge) {
+      const title = t.title || (G.getState().tutorial && G.getState().tutorial.title) || "";
+      badge.textContent = "🎖 " + (title || G.TUTORIAL_TITLE);
+      badge.classList.toggle("hidden", !title);
+    }
+    applyTutorialHighlight();
+  }
+
+  function applyTutorialHighlight() {
+    document.querySelectorAll(".tut-focus").forEach((el) => el.classList.remove("tut-focus"));
+    const t = G.tutorialState();
+    if (t.skipped || t.done || !t.cur) return;
+    if (t.goalMet) return;                 // 달성하면 보상 버튼이 눈에 띄므로 강조 해제
+    if (currentTab !== t.cur.tab) return;
+    if (G.battle && t.cur.tab === "hunt") return;
+    const el = document.getElementById(t.cur.target);
+    if (el) el.classList.add("tut-focus");
+  }
+
+  function showTutorialReward(res) {
+    const rw = res.reward || {};
+    const cells = [];
+    if (rw.gold) cells.push(`<div class="reward-cell"><div class="rc-ico">🪙</div><div class="rc-val">${G.fmtShort(rw.gold)}</div><div class="rc-name">골드</div></div>`);
+    if (rw.stones) cells.push(`<div class="reward-cell"><div class="rc-ico">💎</div><div class="rc-val">${rw.stones}</div><div class="rc-name">강화석</div></div>`);
+    if (rw.frags) cells.push(`<div class="reward-cell"><div class="rc-ico">🔮</div><div class="rc-val">${rw.frags}</div><div class="rc-name">유물조각</div></div>`);
+    if (rw.protect) cells.push(`<div class="reward-cell"><div class="rc-ico">🛡</div><div class="rc-val">${rw.protect}</div><div class="rc-name">봉인부적</div></div>`);
+    openModal(
+      `<div class="modal-hero">
+        <div class="modal-emoji">${res.step.icon}</div>
+        <h3>${res.step.title} 완료!</h3>
+        <p class="modal-sub">${res.step.goal}</p>
+      </div>
+      <div class="modal-body">
+        <div class="reward-grid">${cells.join("")}</div>
+        ${rw.title ? `<div class="tut-badge-show">🎖 칭호 · ${rw.title}</div>` : ""}
+        ${res.finished ? `<div class="tip-box" style="margin-top:10px;">🎓 안내를 모두 마쳤습니다. 이제 심연의 세계가 열립니다.</div>` : ""}
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" id="mtOk">확인</button>
+      </div>`,
+      { onMount() { $("mtOk").onclick = () => { closeModal(); renderAll(); }; } }
+    );
+    sfx("epic");
+    vibrate([16, 30, 16]);
+    const bar = $("questBar");
+    if (bar && !bar.classList.contains("hidden")) sparkle(bar, 8);
+  }
+
+  /* ===============================================================
+     전장 렌더 (실시간 이동 · 지면 경고)
+     =============================================================== */
+  function projField(x, y) {
+    return {
+      left: 9 + (x / 100) * 82,
+      bottom: 12 + ((100 - y) / 100) * 50,
+      scale: 0.60 + (y / 100) * 0.26
+    };
+  }
+
+  function paintField() {
+    const b = G.battle;
+    if (!b || !b.hero) return;
+    const h = b.hero;
+    const ph = projField(h.x, h.y);
+    const hf = $("heroFighter");
+    if (hf) {
+      hf.style.left = ph.left + "%";
+      hf.style.bottom = ph.bottom + "%";
+      hf.style.transform = `translateX(-50%) scale(${ph.scale.toFixed(3)})`;
+      hf.style.zIndex = String(10 + Math.round(h.y));
+      hf.classList.toggle("face-left", h.face < 0);
+      hf.classList.toggle("moving", !!h.moving);
+      hf.classList.toggle("dashing", h.dashT > 0);
+      hf.classList.toggle("swinging", h.swing > 0);
+    }
+    const e = b.enemy;
+    const ef = $("enemyFighter");
+    if (e && ef) {
+      const pe = projField(e.x, e.y);
+      ef.style.left = pe.left + "%";
+      ef.style.bottom = pe.bottom + "%";
+      ef.style.transform = `translateX(-50%) scale(${pe.scale.toFixed(3)})`;
+      ef.style.zIndex = String(10 + Math.round(e.y));
+      ef.classList.toggle("face-left", (e.face || 1) < 0);
+      ef.classList.toggle("moving", !!e.moving);
+    }
+    paintZones(b);
+    const db = $("dashBtn");
+    if (db) {
+      const cd = h.dashCd || 0;
+      db.classList.toggle("cooling", cd > 0);
+      const fld = db.querySelector("i");
+      if (fld) fld.style.transform = `scaleY(${Math.max(0, Math.min(1, 1 - cd / G.FIELD.dashCd)).toFixed(3)})`;
+    }
+  }
+
+  function paintZones(b) {
+    const layer = $("zoneLayer");
+    if (!layer) return;
+    const list = (b.zones || []).filter((z) => z.t > 0);
+    const sig = list.map((z) => z.id).join("|");
+    if (sig !== paintZones._sig) {
+      paintZones._sig = sig;
+      const arena = $("arenaEl");
+      const arw = (arena && arena.clientWidth) || 320;
+      const arh = (arena && arena.clientHeight) || 220;
+      layer.innerHTML = list.map((z) => {
+        if (z.kind === "circle") {
+          const p = projField(z.x, z.y);
+          const w = Math.min(70, z.r * 1.7);
+          const hh = Math.min(46, z.r * 1.05);
+          return `<div class="zone circle" data-z="${z.id}" style="left:${p.left.toFixed(2)}%;bottom:${p.bottom.toFixed(2)}%;width:${w.toFixed(1)}%;height:${hh.toFixed(1)}%"><i class="zc"></i></div>`;
+        }
+        const p1 = projField(z.x1, z.y1);
+        const p2 = projField(z.x2, z.y2);
+        const x1 = (p1.left / 100) * arw, y1 = (p1.bottom / 100) * arh;
+        const x2 = (p2.left / 100) * arw, y2 = (p2.bottom / 100) * arh;
+        const len = Math.hypot(x2 - x1, y2 - y1) || 1;
+        const ang = (Math.atan2(-(y2 - y1), x2 - x1) * 180) / Math.PI;
+        const thick = Math.max(14, z.w * (arh * 0.5 / 100) * 1.15);
+        return `<div class="zone lane" data-z="${z.id}" style="left:${p1.left.toFixed(2)}%;bottom:${p1.bottom.toFixed(2)}%;width:${((len / arw) * 100).toFixed(1)}%;height:${((thick / arh) * 100).toFixed(1)}%;transform:rotate(${ang.toFixed(1)}deg)"><i class="zc"></i></div>`;
+      }).join("");
+    }
+    list.forEach((z) => {
+      const el = layer.querySelector('[data-z="' + z.id + '"]');
+      if (!el) return;
+      el.style.setProperty("--p", ((1 - z.t / z.total) * 100).toFixed(1) + "%");
+    });
+  }
+
+  function startFieldLoop() {
+    const tick = () => {
+      requestAnimationFrame(tick);
+      if (G.battle && currentTab === "hunt") {
+        try { paintField(); } catch (e) { if (!startFieldLoop._warned) { startFieldLoop._warned = true; console.warn("[field]", e); } }
+      }
+    };
+    requestAnimationFrame(tick);
+  }
+
+  function bindMovePad() {
+    const pad = $("movePad");
+    const knob = $("mpKnob");
+    if (!pad || !knob) return;
+    let pid = null, cx = 0, cy = 0, radius = 36;
+    const apply = (e) => {
+      let dx = (e.clientX - cx) / radius;
+      let dy = (e.clientY - cy) / radius;
+      const len = Math.hypot(dx, dy);
+      if (len > 1) { dx /= len; dy /= len; }
+      knob.style.transform = `translate(${(dx * radius * 0.34).toFixed(1)}px, ${(dy * radius * 0.34).toFixed(1)}px)`;
+      G.arena.setMove(dx, dy);
+    };
+    pad.addEventListener("pointerdown", (e) => {
+      if (pid !== null) return;
+      pid = e.pointerId;
+      const r = pad.getBoundingClientRect();
+      cx = r.left + r.width / 2;
+      cy = r.top + r.height / 2;
+      radius = Math.max(24, r.width * 0.34);
+      pad.classList.add("active");
+      try { pad.setPointerCapture(pid); } catch (err) {}
+      apply(e);
+      e.preventDefault();
+    });
+    pad.addEventListener("pointermove", (e) => {
+      if (e.pointerId !== pid) return;
+      apply(e);
+      e.preventDefault();
+    });
+    const end = () => {
+      pid = null;
+      pad.classList.remove("active");
+      knob.style.transform = "translate(0px, 0px)";
+      G.arena.setMove(0, 0);
+    };
+    pad.addEventListener("pointerup", end);
+    pad.addEventListener("pointercancel", end);
+    pad.addEventListener("lostpointercapture", end);
+  }
+
+  function doAttack() {
+    if (!G.battle) return;
+    const res = G.arena.attack();
+    if (res.ok) {
+      if ($("tapHint")) $("tapHint").style.display = "none";
+      sfx("tap");
+      vibrate(8);
+      const ab = $("attackBtn");
+      if (ab) { ab.classList.remove("hit"); void ab.offsetWidth; ab.classList.add("hit"); }
+    }
+  }
+
   /* ===============================================================
      유물 탭
      =============================================================== */
@@ -778,6 +1022,7 @@
     if (tab === "relic") renderRelics();
     if (tab === "codex") renderCodex();
     updateBattleMini();
+    applyTutorialHighlight();
     sfx("click");
   }
 
@@ -794,6 +1039,7 @@
     renderForge();
     renderRelics();
     renderCodex();
+    renderQuest();
     updateBattleMini();
   }
 
@@ -994,7 +1240,7 @@
     });
 
     $("sellBtn").addEventListener("click", () => {
-      const lv = S().weapon.level;
+      const lv = S().forge.level;
       if (lv <= 0) { toast("지금은 팔 것이 없습니다", "", "🪙"); return; }
       confirmModal(
         `+${lv} 검을 매각할까요?`,
@@ -1136,6 +1382,117 @@
       const sk = G.SKILLS.find((x) => x.id === btn.dataset.skillUp);
       toast(`[${sk.name}] Lv.${(S().skills[sk.id] || 0) + 1} 강화!`, "good", sk.icon);
     });
+
+    /* --- 장착 · 이동패드 · 키보드 --- */
+    if ($("equipBtn")) {
+      $("equipBtn").addEventListener("click", () => {
+        const s = S();
+        const doIt = () => {
+          const r = G.equip();
+          if (!r.ok) return;
+          sfx("epic");
+          vibrate([12, 24, 12]);
+          forgeSwordLevel = null;
+          renderForge();
+          renderHeader(true);
+          renderJourney();
+          renderQuest();
+          if (G.battle) { battleKey = ""; renderBattleChrome(); }
+          toast(`+${r.level} 검 장착!` + (r.stored !== r.level ? ` (+${r.stored} 보관)` : ""), "epic", "⚔");
+        };
+        if (s.forge.level < s.equipped.level) {
+          confirmModal(
+            "낮은 검으로 교체할까요?",
+            `장착 중인 +${s.equipped.level} 검이 강화 슬롯으로 내려가고 +${s.forge.level} 검을 장착합니다. 사냥 공격력이 약해집니다.`,
+            "교체",
+            doIt
+          );
+        } else doIt();
+      });
+    }
+
+    if ($("dashBtn")) {
+      $("dashBtn").addEventListener("click", () => {
+        const r = G.arena.dash();
+        if (r.ok) { sfx("dodge"); vibrate(10); }
+        else if (r.reason === "cooldown") toast("대시 준비 중", "", "🌀");
+      });
+    }
+    bindMovePad();
+
+    const keys = {};
+    const keyVec = () => {
+      let x = 0, y = 0;
+      if (keys["a"] || keys["arrowleft"]) x -= 1;
+      if (keys["d"] || keys["arrowright"]) x += 1;
+      if (keys["w"] || keys["arrowup"]) y -= 1;
+      if (keys["s"] || keys["arrowdown"]) y += 1;
+      return { x, y };
+    };
+    const navKeys = ["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright", " "];
+    document.addEventListener("keydown", (e) => {
+      const k = (e.key || "").toLowerCase();
+      if (navKeys.indexOf(k) >= 0) {
+        keys[k] = true;
+        const v = keyVec();
+        G.arena.setMove(v.x, v.y);
+        if (k === " ") { e.preventDefault(); doAttack(); }
+        return;
+      }
+      if (k === "shift") { G.arena.dash(); return; }
+      if (k === "1" || k === "2" || k === "3") {
+        const sk = G.SKILLS[Number(k) - 1];
+        if (sk) {
+          const r = G.useSkill(sk.id);
+          if (r.ok) sfx(sk.type === "heal" ? "heal" : "crit");
+        }
+      }
+    });
+    document.addEventListener("keyup", (e) => {
+      const k = (e.key || "").toLowerCase();
+      if (k in keys) {
+        keys[k] = false;
+        const v = keyVec();
+        G.arena.setMove(v.x, v.y);
+      }
+    });
+
+    /* --- 안내 퀘스트 --- */
+    if ($("qbClaim")) {
+      $("qbClaim").addEventListener("click", () => {
+        const t = G.tutorialState();
+        if (!t.cur) return;
+        if (!t.goalMet) { switchTab(t.cur.tab); toast(t.cur.hint, "", "🎓"); return; }
+        const r = G.claimTutorial();
+        if (!r.ok) { toast("아직 목표를 달성하지 못했습니다", "bad", "🎓"); return; }
+        renderQuest();
+        showTutorialReward(r);
+      });
+    }
+    if ($("qbToggle")) {
+      $("qbToggle").addEventListener("click", () => {
+        const t = G.tutorialState();
+        G.setTutorialCollapsed(!t.collapsed);
+        renderQuest();
+      });
+    }
+    if ($("qbSkip")) {
+      $("qbSkip").addEventListener("click", () => {
+        confirmModal("안내를 닫을까요?", "단계별 안내와 보상을 그만 받습니다. 설정에서 언제든 다시 볼 수 있습니다.", "닫기", () => {
+          G.skipTutorial();
+          renderQuest();
+          toast("안내를 닫았습니다", "", "🎓");
+        });
+      });
+    }
+    if ($("tutorialReplayBtn")) {
+      $("tutorialReplayBtn").addEventListener("click", () => {
+        G.restartTutorial();
+        renderQuest();
+        switchTab("hunt");
+        toast("안내 퀘스트를 다시 시작했습니다", "", "🎓");
+      });
+    }
 
     const unlock = () => { audio(); window.removeEventListener("pointerdown", unlock); };
     window.addEventListener("pointerdown", unlock, { once: true });
@@ -1455,6 +1812,9 @@
     G.bus.on("battle:start", () => {
       battleKey = "";
       hidePattern();
+      paintZones._sig = "";
+      const zl = $("zoneLayer");
+      if (zl) zl.innerHTML = "";
       renderHunt();
     });
 
@@ -1544,13 +1904,21 @@
         const label = p.pattern.action === "guard" ? "완벽한 방어!" : "완벽한 회피!";
         floatNum($("heroSprite"), label, "heal");
         sparkle($("heroSprite"), 5);
-        toast(label + " 피해를 줄였어요", "good", "🛡️");
+        toast(label + " 피해를 줄였습니다", "good", "🛡️");
+      } else if (p.dodged) {
+        floatNum($("heroSprite"), "회피 성공!", "heal");
+        toast("붉은 지대를 벗어났습니다!", "good", "🌀");
       } else if (p.dmg > 0) {
         floatNum($("heroSprite"), "-" + p.dmg, "hero");
         vibrate(40);
-        toast(`${p.pattern.name}에 맞았어요! 다음엔 꼭 대응해요`, "bad", "💥");
+        toast(`${p.pattern.name}에 맞았습니다! 다음엔 지대를 벗어나거나 대응하세요`, "bad", "💥");
       }
       updateBattleFrame();
+    });
+    G.bus.on("battle:dash", () => {
+      const hf = $("heroFighter");
+      if (hf) { hf.classList.remove("dashFx"); void hf.offsetWidth; hf.classList.add("dashFx"); }
+      sfx("dodge");
     });
     G.bus.on("battle:patternEnd", () => { hidePattern(); });
     G.bus.on("battle:counter", (p) => {
@@ -1600,6 +1968,8 @@
     });
 
     G.bus.on("log", () => { renderLog(); });
+    G.bus.on("tutorial:update", () => { renderQuest(); });
+    G.bus.on("tutorial:claim", () => { renderHeader(false); renderCodex(); });
   }
 
   /* ===============================================================
@@ -1632,13 +2002,14 @@
 
   function refreshAffordability() {
     const s = S();
-    const lv = s.weapon.level;
+    const lv = s.forge.level;
     if (lv >= G.MAX_LV) return;
-    const cost = G.enhanceCost(lv) + (s.weapon.protect && lv >= G.FORGE.breakStartLv ? G.protectCost(lv) : 0);
+    const freeTok = s.forge.freeProtect > 0 && lv >= G.FORGE.breakStartLv && s.forge.protect;
+    const cost = G.enhanceCost(lv) + (s.forge.protect && lv >= G.FORGE.breakStartLv && !freeTok ? G.protectCost(lv) : 0);
     const disabled = s.gold < cost;
     if ($("enhanceBtn").disabled !== disabled) {
       $("enhanceBtn").disabled = disabled;
-      $("enhanceMain").textContent = disabled ? "🪙 골드 부족" : (s.weapon.pity >= 100 ? "🌑 원한 폭발!" : "⚒ 망치질");
+      $("enhanceMain").textContent = disabled ? "🪙 골드 부족" : (s.forge.pity >= 100 ? "🌑 원한 폭발!" : "⚒ 망치질");
     }
   }
 
@@ -1652,6 +2023,7 @@
     bindGameEvents();
     renderAll();
     renderHeader(true);
+    startFieldLoop();
 
     currentWorld = 1;
     if (S().progress.maxStage > 1) {

@@ -81,6 +81,7 @@
             <div class="hero-line">
               <b>서약자 <span id="heroLvText">Lv.1</span></b>
               <span class="hero-title" id="heroTitle">잿더미의 생존자</span>
+              <span class="hero-badge hidden" id="heroBadge">🎖 심연의 서약자</span>
             </div>
             <div class="bar hp big" id="heroHpBar"><i id="heroHpFill"></i><span id="heroHpText">130 / 130</span></div>
             <div class="stat-chips">
@@ -170,7 +171,8 @@
             <div class="wave-pips" id="wavePips"></div>
             <div class="combo-chip" id="comboChip">연속 3</div>
 
-            <div class="arena">
+            <div class="arena field-mode" id="arenaEl">
+              <div class="zone-layer" id="zoneLayer"></div>
               <div class="fighter hero-fighter" id="heroFighter">
                 <div class="sprite-wrap" id="heroSprite"></div>
                 <div class="fighter-name">서약자</div>
@@ -182,6 +184,10 @@
                 <div class="fighter-name" id="enemyName">부패한 점액</div>
                 <div class="bar enemy"><i id="fightEnemyHp"></i><span id="enemyHpText">28 / 28</span></div>
               </div>
+              <div class="move-pad" id="movePad" aria-label="이동 조이스틱">
+                <div class="mp-knob" id="mpKnob"></div>
+              </div>
+              <button class="dash-btn" id="dashBtn" aria-label="회피 대시"><span class="db-ico">»</span><em class="db-txt">대시</em><i></i></button>
             </div>
             <div class="scene-vignette" id="sceneVignette"></div>
           </div>
@@ -219,13 +225,32 @@
             <span>⚒ <b id="biWeapon">+0</b></span>
             <span>⚔ <b id="biAtk">10</b></span>
             <span>🎯 <b id="biCrit">8%</b></span>
-            <span class="bi-tip">경고가 뜨면 방어·회피·카운터</span>
+            <span class="bi-tip">조이스틱/WASD 이동 · Space 공격 · Shift 대시 · 1·2·3 기술</span>
           </div>
         </div>
       </section>
 
       <!-- ---------------- 대장간 ---------------- -->
       <section class="tab-page" id="tab-forge">
+        <!-- 장착 슬롯 · 강화 슬롯 -->
+        <div class="slot-board">
+          <div class="slot-card equipped">
+            <div class="slot-head"><span class="slot-tag">🗡 현재 장착</span><span class="slot-who">사냥 사용</span></div>
+            <div class="slot-lv" id="equippedLv">+0</div>
+            <div class="slot-name" id="equippedName">녹슨 파편검</div>
+            <div class="slot-atk" id="equippedAtk">공격력 10</div>
+          </div>
+          <div class="slot-arrow" aria-hidden="true">⇄</div>
+          <div class="slot-card forge">
+            <div class="slot-head"><span class="slot-tag">⚒ 강화 슬롯</span><span class="slot-who">모루 위</span></div>
+            <div class="slot-lv" id="forgeSlotLv">+0</div>
+            <div class="slot-name" id="forgeSlotName">녹슨 파편검</div>
+            <div class="slot-atk" id="forgeSlotAtk">공격력 10</div>
+          </div>
+        </div>
+        <button class="btn btn-lav equip-btn" id="equipBtn">⚔ 강화 슬롯 검 장착하기</button>
+        <div class="equip-note" id="equipNote">장착하면 두 검이 자리를 바꿉니다. 강화 중 검이 부서져도 장착한 검은 그대로 남습니다.</div>
+
         <div class="forge-card">
           <div class="forge-toast" id="forgeToast">강화 성공</div>
           <div class="forge-head">
@@ -374,6 +399,11 @@
             <div class="sr-copy"><b>📥 불러오기</b><p>백업한 저장 파일을 붙여넣거나 올립니다</p></div>
             <button class="btn btn-ghost btn-sm" id="importBtn">불러오기</button>
           </div>
+          <div class="setting-row">
+            <div class="sr-copy"><b>🎓 안내 퀘스트</b><p>초보자 4단계 안내와 보상을 다시 봅니다</p></div>
+            <button class="btn btn-ghost btn-sm" id="tutorialReplayBtn">다시 보기</button>
+          </div>
+
           <div class="setting-row danger">
             <div class="sr-copy"><b>🧹 처음부터</b><p>모든 진행을 지우고 새로 시작합니다</p></div>
             <button class="btn btn-danger btn-sm" id="resetBtn">초기화</button>
@@ -382,7 +412,7 @@
           <div class="save-info" id="saveInfo">자동 저장 준비 중…</div>
           <div class="tip-box" id="tipBox">💡 팁: +5강부터 실패하면 단계가 내려가고, +10강부터는 검이 부서질 수 있습니다.</div>
           <div class="credits">
-            심연의 대장간 v3.0 · 저주받은 성검<br />
+            심연의 대장간 v3.1 · 저주받은 성검<br />
             15개 황폐한 세계 · 180개 원정 구역 · 지배자 15종<br />
             원작: 전설의 대장장이 — 다크 판타지 강화·사냥 RPG로 재단장 ⚔
           </div>
@@ -396,6 +426,21 @@
       <b id="battleMiniStage">전투 중</b>
       <span id="battleMiniHp">100%</span>
       <button id="battleMiniGo">전투로</button>
+    </div>
+
+    <!-- 초보자 안내 퀘스트 -->
+    <div class="quest-bar hidden" id="questBar">
+      <div class="qb-main">
+        <div class="qb-top">
+          <span class="qb-step" id="qbStep">1/4</span>
+          <b class="qb-title" id="qbTitle">첫 망치질</b>
+          <button class="qb-mini" id="qbToggle" aria-label="안내 접기">▾</button>
+          <button class="qb-mini" id="qbSkip" aria-label="안내 닫기">✕</button>
+        </div>
+        <div class="qb-goal" id="qbGoal">대장간에서 검을 1회 강화하기</div>
+        <div class="qb-dots" id="qbDots"></div>
+      </div>
+      <button class="btn btn-sun qb-claim" id="qbClaim">이동</button>
     </div>
 
     <!-- ===================== 바텀 내비 ===================== -->
