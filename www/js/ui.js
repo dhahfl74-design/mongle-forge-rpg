@@ -1467,6 +1467,8 @@
     const back = openModal(html, "boss-clear-modal");
     back.querySelectorAll("[data-close]").forEach((b) => b.addEventListener("click", () => closeModal()));
   }
+
+  function confirmModal(title, text, onOk) {
     const html = '<div class="confirm-modal"><div class="confirm-icon">⚠️</div><div class="modal-title">' + title + '</div>' +
       '<div class="confirm-text">' + text + '</div><div class="confirm-actions">' +
       '<button class="btn btn-ghost" data-cancel>취소</button><button class="btn btn-danger" data-ok>확인</button></div></div>';
