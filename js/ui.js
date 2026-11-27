@@ -283,17 +283,22 @@
       ring.classList.remove("on");
       void ring.offsetWidth;
       ring.classList.add("on");
-      stingerName.textContent = r.name;
-      stinger.classList.toggle("myth", rarityIdx >= 5);
-      stinger.classList.remove("on");
-      void stinger.offsetWidth;
-      stinger.classList.add("on");
       G.sfx("chestOpen");
-      G.sfx("reveal", rarityIdx);
       burstSparks(r.color, rarityIdx);
       if (rarityIdx >= 3) { haptic([20, 30, 20]); fx.shake(5, 180); }
       else haptic(16);
-      const delay = skipped ? 90 : 620;
+      // 3막 확정 — 뚜껑이 열린 뒤 등급 타이포가 내려앉는다
+      const stingerLead = skipped ? 0 : 170;
+      setTimeout(() => {
+        if (token !== chestToken) return;
+        stingerName.textContent = r.name;
+        stinger.classList.toggle("myth", rarityIdx >= 5);
+        stinger.classList.remove("on");
+        void stinger.offsetWidth;
+        stinger.classList.add("on");
+        G.sfx("reveal", rarityIdx);
+      }, stingerLead);
+      const delay = skipped ? 90 : 700;
       setTimeout(() => {
         if (token !== chestToken) return;
         if (done) done();
