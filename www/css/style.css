@@ -1032,8 +1032,9 @@ body.quest-on .content { padding-bottom: 178px; }
 .cx-copy > span { display: block; font-size: 9px; color: var(--dim2); margin: 1px 0 5px; }
 .cx-bar { height: 6px; border-radius: 4px; background: rgba(255,255,255,.07); overflow: hidden; }
 .cx-bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #8a6cff, #d0b3ff); box-shadow: 0 0 10px rgba(160,120,255,.6); transition: width .35s; }
-.cx-bonus { flex: 0 0 auto; text-align: center; font-size: 9px; color: var(--dim2); white-space: nowrap; min-width: 46px; }
-.cx-bonus b { display: block; font-family: var(--num); font-size: 17px; color: #7bf0b0; }
+.cx-bonus { flex: 0 0 auto; text-align: center; font-size: 8.5px; color: var(--dim2); white-space: nowrap; min-width: 54px; }
+.cx-bonus span { display: block; font-size: 7.5px; letter-spacing: -.2px; color: var(--dim2); opacity: .8; }
+.cx-bonus b { display: block; font-family: var(--num); font-size: 15px; color: #7bf0b0; letter-spacing: -.3px; }
 
 .cx-seg { display: flex; gap: 4px; margin-bottom: 9px; }
 .cx-seg button {
@@ -1485,6 +1486,15 @@ textarea.save-box { width: 100%; height: 110px; margin-top: 8px; border-radius: 
 @media (min-width: 520px) and (min-height: 600px) {
   body { background: radial-gradient(120% 70% at 50% 0%, #17111f 0%, #08060c 55%, #030206 100%); }
   .app { box-shadow: 0 0 0 1px rgba(236,205,133,.14), 0 40px 120px -30px #000; }
+}
+
+/* 폰 화면 — 10연 결과 10칸이 한 화면에 최대한 들어오도록 */
+@media (max-height: 900px) {
+  .batch-cell { min-height: 102px; padding: 8px 4px 3px; }
+  .batch-cell .bc-ico { width: 82px; height: 82px; }
+  .batch-cell .bc-name { font-size: 11px; }
+  .batch-grid { gap: 5px; margin: 4px 0 8px; }
+  .batch-summary { font-size: 9.5px; margin-bottom: 6px; }
 }
 
 /* 아주 좁은 화면 */
