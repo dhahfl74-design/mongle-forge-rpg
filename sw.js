@@ -1,5 +1,5 @@
-/* 심연의 대장간 v5.2 — 오프라인 캐시 (연출·UI A안) */
-const CACHE_NAME = "abyss-forge-v5.2-staging";
+/* 심연의 대장간 v5.3 — 오프라인 캐시 (폴리싱 · 편의 · 보스 연출) */
+const CACHE_NAME = "abyss-forge-v5.3";
 const ASSETS = [
   "./",
   "./index.html",
