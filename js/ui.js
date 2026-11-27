@@ -874,10 +874,9 @@
       const r = rar(it.rarity);
       return '<button class="batch-cell ' + (it === best ? "best" : "") + '" data-batch="' + i + '" style="--rc:' + r.color + ';--i:' + i + '">' +
         (it.isNew ? '<span class="bc-new"></span>' : '') +
-        (it.equippedNow ? '<span class="bc-eq">장착</span>' : '') +
         '<div class="bc-ico">' + iconImg(it) + '</div>' +
         '<div class="bc-name">' + esc(it.name) + '</div>' +
-        '<div class="bc-rar" style="color:' + r.color + '">' + r.name + ' · ' + G.SLOT_BY_KEY[it.slot].name + '</div>' +
+        '<div class="bc-rar" style="color:' + r.color + '">' + (it.equippedNow ? '<b class="bc-eqtag">장착</b>' : '') + r.name + ' · ' + G.SLOT_BY_KEY[it.slot].name + '</div>' +
         '</button>';
     }).join("");
     const chips = [];
