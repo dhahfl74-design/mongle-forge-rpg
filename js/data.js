@@ -7,7 +7,7 @@
   "use strict";
   const G = (window.GAME = window.GAME || {});
 
-  G.VERSION = "5.3.0";
+  G.VERSION = "5.3.1";
   G.SAVE_KEY = "mongle_forge_v5";
   G.LEGACY_KEYS = ["mongle_forge_save_v2", "sword_enhancer_app_save_v1"];
 
