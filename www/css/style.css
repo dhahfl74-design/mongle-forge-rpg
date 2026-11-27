@@ -1309,6 +1309,11 @@ body.quest-on .content { padding-bottom: 178px; }
 }
 .batch-cell .bc-new { position: absolute; top: 6px; right: 7px; width: 6px; height: 6px; border-radius: 50%; background: #5fdc97; box-shadow: 0 0 7px #5fdc97; }
 .batch-cell .bc-eq { position: absolute; top: 5px; left: 6px; font-size: 8px; font-weight: 900; color: #1d1204; padding: 0 4px; border-radius: 4px; background: linear-gradient(180deg,#fff0c8,#d9b45c); }
+.batch-cell .bc-eqtag {
+  display: inline-block; margin-right: 3px; padding: 0 3px; border-radius: 3px;
+  font-size: 7.5px; font-weight: 900; color: #241504;
+  background: linear-gradient(180deg, #ffe9b0, #d9b45c);
+}
 .batch-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 .batch-actions .btn.wide { flex: 1 1 100%; }
 .modal.batch-modal .batch-actions {
