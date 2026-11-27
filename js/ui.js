@@ -688,7 +688,7 @@
     $("#codexCount").textContent = seenCount + " / " + total;
     $("#codexFill").style.width = (seenCount / total * 100) + "%";
     const st = G.stats();
-    $("#codexBonus").textContent = (st.collectionBonus * 100).toFixed(1);
+    $("#codexBonus").textContent = "+" + (st.collectionBonus * 100).toFixed(1) + "%";
     const list = G.ITEMS.filter((d) => ui.cxSlot === "all" || d.slot === ui.cxSlot);
     $("#codexGrid").innerHTML = list.map((d) => {
       const r = rar(d.rarity);
