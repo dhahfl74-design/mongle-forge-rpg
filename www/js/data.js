@@ -7,7 +7,7 @@
   "use strict";
   const G = (window.GAME = window.GAME || {});
 
-  G.VERSION = "5.2.0";
+  G.VERSION = "5.3.0";
   G.SAVE_KEY = "mongle_forge_v5";
   G.LEGACY_KEYS = ["mongle_forge_save_v2", "sword_enhancer_app_save_v1"];
 
@@ -152,8 +152,8 @@
   /* ---------------- 밸런스 ---------------- */
   G.BAL = {
     recPower: (S, i) => 34 * S * (1 + 0.045 * ((i || 1) - 1)),   // 구역 권장 전투력
-    enemyHp: (S, boss, i) => (boss ? 400 * 6.4 : 400) * S * (1 + 0.045 * ((i || 1) - 1)),
-    enemyAtk: (S, boss) => (boss ? 6.4 : 2.2) * S,
+    enemyHp: (S, boss, i) => (boss ? 400 * 8.0 : 400) * S * (1 + 0.045 * ((i || 1) - 1)),
+    enemyAtk: (S, boss) => (boss ? 7.2 : 2.2) * S,
     enemyInterval: (boss) => (boss ? 1.5 : 1.9),
     goldPerKill: (S, boss) => Math.round((12 * Math.pow(S, 1.0)) * (boss ? 24 : 1)),
     expPerKill: (S, boss) => Math.round((8 * Math.pow(S, 0.6)) * (boss ? 10 : 1)),
@@ -162,7 +162,7 @@
     fragBoss: 6,
     heroHp: (atk, lv) => Math.round(300 + lv * 26 + atk * 1.1),
     heroBaseAtk: (lv) => 8 + (lv - 1) * 2.6,
-    heroRegen: 0.035,
+    heroRegen: 0.025,
     respawnSec: 3.2,
     killGap: 0.34
   };
@@ -296,7 +296,7 @@
   G.TIPS = [
     "상자 레벨을 올리면 전설·신화 등장 확률이 눈에 띄게 올라갑니다.",
     "같은 장비라도 등급이 높으면 기본 공격력이 최대 5배입니다.",
-    "장착한 장비를 강화하면 그 장비의 공격력만 +9%씩 오릅니다.",
+    "장착한 장비를 강화하면 그 장비의 공격력이 +1당 7.5%씩 오릅니다.",
     "+5강부터 실패하면 단계가 내려가고, +10강부터는 장비가 부서질 수 있습니다.",
     "+10강부터 봉인 부적을 켜두면 파괴를 한 번 막아줍니다.",
     "장인의 원한 게이지가 100%가 되면 다음 강화는 반드시 성공합니다.",
@@ -305,6 +305,7 @@
     "상자에서 나온 장비는 🎒 보관함에 쌓입니다. 나중에 장착해도 되니 비교하고 고르세요.",
     "보관함에서 장착하면 이전 장비가 분해되지 않고 보관함으로 돌아옵니다.",
     "지배자를 잡으면 열쇠와 유물 파편을 크게 줍습니다.",
+    "열쇠가 떨어지면 상자 화면의 [열쇠 구매]로 골드를 열쇠로 바꿀 수 있습니다.",
     "자리를 비우면 오프라인 보상이 쌓입니다."
   ];
 })();

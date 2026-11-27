@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Gothic+A1:wght@400;500;700;800;900&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="./css/style.css?v=5.2.0" />
+<link rel="stylesheet" href="./css/style.css?v=5.3.0" />
 <link rel="preload" as="image" href="./assets/items/chest-ornate.webp" />
 <link rel="preload" as="image" href="./assets/arena-bg.jpg" />
 <link rel="preload" as="image" href="./assets/hero.png" />
@@ -91,6 +91,7 @@
       <button class="boss-btn" id="bossBtn"><span>보스 도전</span></button>
       <button class="mini-btn" id="stagePickBtn">구역<svg><use href="#i-arrow"/></svg></button>
     </div>
+    <div class="ac-progress" id="acProgress" aria-hidden="true"><i id="acProgressFill"></i></div>
 
     <div class="ac-scene" id="acScene">
       <div class="side-hud hero-side" id="heroSideHud">
@@ -117,13 +118,20 @@
       </div>
 
       <div class="combo-chip" id="comboChip">콤보 0</div>
+      <button class="boss-cta" id="bossCta" aria-hidden="true">
+        <span class="cta-ico">👑</span>
+        <b>지배자가 기다립니다</b>
+        <span class="cta-sub">도전해야 전투가 시작됩니다</span>
+        <em>지배자 도전</em>
+      </button>
       <div class="dmg-layer" id="dmgLayer"></div>
       <div class="hit-flash" id="hitFlash"></div>
-      <div class="down-banner" id="downBanner">쓰러졌습니다 · 재정비 중</div>
+      <div class="down-banner" id="downBanner" aria-hidden="true">쓰러졌습니다 · 재정비 중</div>
     </div>
 
     <div class="ac-bottom">
       <div class="power-line">전투력 <b id="powerVal">0</b> <span id="powerRec">/ 권장 0</span></div>
+      <div class="kill-line" id="killLine">처치 0/6</div>
       <div class="drop-line" id="dropLine"><span class="dl-idle">사냥 중…</span></div>
     </div>
   </section>
@@ -150,10 +158,10 @@
           </div>
           <div class="myth-blade" id="mythBlade"><img src="./assets/sword-mythic.png" alt="" draggable="false" /></div>
           <div class="shock-ring" id="shockRing"></div>
-          <div class="stinger" id="stinger"><b id="stingerName">신화</b></div>
-          <div class="sparks" id="sparks"></div>
-          <div class="rise-cards" id="riseCards"></div>
-          <button class="chest-skip" id="chestSkip">탭하여 건너뛰기</button>
+          <div class="stinger" id="stinger" aria-hidden="true"><b id="stingerName">신화</b></div>
+          <div class="sparks" id="sparks" aria-hidden="true"></div>
+          <div class="rise-cards" id="riseCards" aria-hidden="true"></div>
+          <button class="chest-skip" id="chestSkip" aria-hidden="true">탭하여 건너뛰기</button>
         </div>
 
         <div class="pull-row">
@@ -174,13 +182,19 @@
           <label class="switch-line" for="autoSalvage"><span>자동 분해</span>
             <select id="autoSalvage">
               <option value="none">사용 안 함</option>
-              <option value="normal">일반 미만</option>
-              <option value="uncommon">고급 미만</option>
-              <option value="rare">희귀 미만</option>
-              <option value="epic">영웅 미만</option>
-              <option value="legend">전설 미만</option>
+              <option value="normal">일반만</option>
+              <option value="uncommon">고급 이하</option>
+              <option value="rare">희귀 이하</option>
+              <option value="epic">영웅 이하</option>
+              <option value="legend">전설 이하</option>
             </select>
           </label>
+        </div>
+
+        <div class="key-shop" id="keyShop">
+          <div class="ks-copy"><b>🔑 열쇠 구매</b><span>골드로 열쇠를 채웁니다</span></div>
+          <button class="btn btn-ghost sm" id="buyKey1">1개 <em id="keyPrice1">950 G</em></button>
+          <button class="btn btn-gold sm" id="buyKey10">10개 <em id="keyPrice10">8,500 G</em></button>
         </div>
       </div>
 
@@ -228,6 +242,7 @@
             <div class="fv-icon" id="fvIcon"><svg><use href="#i-sword"/></svg></div>
             <div class="fv-lv" id="fvLv">+0</div>
             <div class="fv-shine"></div>
+            <div class="fv-stinger" id="fvStinger" aria-hidden="true"><b id="fvStingerText">+10</b></div>
           </div>
           <div class="forge-info">
             <div class="fi-name" id="fiName">장비를 선택하세요</div>
@@ -343,7 +358,7 @@
       </div>
 
       <div class="credits">
-        <b>심연의 대장간 v5.2</b><br />
+        <b>심연의 대장간 v5.3</b><br />
         15세계 · 180구역 · 장비 72종 · 6등급 · 강화 +20 · 상자 20레벨<br />
         상자깡 · 강화 · 수집 · 🎒 보관함 · 전장 연출
       </div>
@@ -402,9 +417,9 @@
     });
   }
   </script>
-<script src="./js/data.js?v=5.2.0"></script>
-<script src="./js/audio.js?v=5.2.0"></script>
-<script src="./js/engine.js?v=5.2.0"></script>
-<script src="./js/ui.js?v=5.2.0"></script>
+<script src="./js/data.js?v=5.3.0"></script>
+<script src="./js/audio.js?v=5.3.0"></script>
+<script src="./js/engine.js?v=5.3.0"></script>
+<script src="./js/ui.js?v=5.3.0"></script>
 </body>
 </html>

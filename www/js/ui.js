@@ -132,7 +132,41 @@
       chip.classList.add("bump");
     }
     $("#downBanner").classList.toggle("show", v.respawn > 0);
+    const down = $("#downBanner");
+    if (down) down.setAttribute("aria-hidden", v.respawn > 0 ? "false" : "true");
     $("#bossBtn").classList.toggle("show", st.isBoss && !S.progress.cleared[st.key] && !v.bossFight);
+
+    /* ---- 구역 진행도 ---- */
+    const progBox = $("#acProgress");
+    const progFill = $("#acProgressFill");
+    const killLine = $("#killLine");
+    if (progBox && progFill) {
+      progBox.classList.toggle("boss", !!st.isBoss);
+      let pct = 0;
+      if (st.isBoss) {
+        if (v.bossFight && v.enemy) pct = 1 - Math.max(0, v.enemy.hp) / Math.max(1, v.enemy.maxHp);
+        else pct = S.progress.cleared[st.key] ? 1 : 0;
+      } else {
+        pct = Math.min(1, (v.killsInStage || 0) / Math.max(1, st.mobCount || 6));
+      }
+      progFill.style.width = (pct * 100).toFixed(1) + "%";
+    }
+    if (killLine) {
+      if (st.isBoss) {
+        if (v.bossFight && v.enemy) killLine.innerHTML = "지배자 <b>" + Math.max(0, Math.round((1 - v.enemy.hp / Math.max(1, v.enemy.maxHp)) * 100)) + "%</b> 격파";
+        else killLine.innerHTML = S.progress.cleared[st.key] ? "정복 완료" : "<b>도전 대기</b>";
+      } else {
+        killLine.innerHTML = "처치 <b>" + Math.min(v.killsInStage || 0, st.mobCount || 6) + "/" + (st.mobCount || 6) + "</b>";
+      }
+    }
+
+    /* ---- 지배자 도전 유도 ---- */
+    const cta = $("#bossCta");
+    if (cta) {
+      const show = !!v.bossReady && v.respawn <= 0;
+      cta.classList.toggle("show", show);
+      cta.setAttribute("aria-hidden", show ? "false" : "true");
+    }
     const st2 = G.stats();
     $("#powerVal").textContent = G.fmt(st2.power);
     $("#powerRec").textContent = "/ 권장 " + G.fmt(G.BAL.recPower(st.scale, st.i));
@@ -383,11 +417,18 @@
     const res = G.pull(n);
     if (!res.ok) {
       G.sfx("error");
-      toast("🔑 열쇠가 부족합니다 · " + (n === 10 ? 10 : 1) + "개 필요");
+      toast("🔑 열쇠가 부족합니다 · " + (n === 10 ? 10 : 1) + "개 필요 · 아래 [열쇠 구매]로 채울 수 있습니다");
       const b = n === 10 ? $("#pull10Btn") : $("#pullBtn");
       b.classList.remove("shake");
       void b.offsetWidth;
       b.classList.add("shake");
+      const ks = $("#keyShop");
+      if (ks) {
+        ks.classList.remove("flash");
+        void ks.offsetWidth;
+        ks.classList.add("flash");
+        ks.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
       return;
     }
     const items = res.items;
@@ -429,6 +470,17 @@
     }).join("");
   }
 
+  function renderKeyShop() {
+    const p1 = $("#keyPrice1");
+    const p10 = $("#keyPrice10");
+    if (p1) p1.textContent = G.fmt(G.CHEST.keyPrice) + " G";
+    if (p10) p10.textContent = G.fmt(G.CHEST.keyPrice10) + " G";
+    const b1 = $("#buyKey1");
+    const b10 = $("#buyKey10");
+    if (b1) b1.classList.toggle("poor", S.gold < G.CHEST.keyPrice);
+    if (b10) b10.classList.toggle("poor", S.gold < G.CHEST.keyPrice10);
+  }
+
   function renderChest() {
     $("#chestLv").textContent = S.chest.lv;
     const c = G.chestLevelCost();
@@ -451,6 +503,7 @@
     $("#autoEquip").checked = !!S.chest.autoEquip;
     $("#autoSalvage").value = S.chest.autoSalvage || "none";
     renderRecent();
+    renderKeyShop();
   }
 
   /* ================= 모루 ================= */
@@ -708,8 +761,13 @@
   function renderQuest() {
     const step = G.tutorialStep();
     const bar = $("#questBar");
-    if (!step || S.tutorial.collapsed) { bar.classList.remove("show"); return; }
+    if (!step || S.tutorial.collapsed) {
+      bar.classList.remove("show");
+      document.body.classList.remove("quest-on");
+      return;
+    }
     bar.classList.add("show");
+    document.body.classList.add("quest-on");
     $("#qIcon").textContent = step.icon;
     $("#qStep").textContent = (S.tutorial.idx + 1) + "/" + G.TUTORIAL.length;
     $("#qTitle").textContent = step.title;
@@ -808,6 +866,10 @@
   function showBatch(items) {
     const best = items.reduce((a, b) => (rar(b.rarity).idx > rar(a.rarity).idx ? b : a), items[0]);
     const bestR = rar(best.rarity);
+    const storedN = items.filter((it) => !it.salvaged && !it.equippedNow && G.invFind(it.uid)).length;
+    const salvagedN = items.filter((it) => it.salvaged).length;
+    const newN = items.filter((it) => it.isNew).length;
+    const equipN = items.filter((it) => it.equippedNow).length;
     const cells = items.map((it, i) => {
       const r = rar(it.rarity);
       return '<button class="batch-cell ' + (it === best ? "best" : "") + '" data-batch="' + i + '" style="--rc:' + r.color + ';--i:' + i + '">' +
@@ -818,14 +880,35 @@
         '<div class="bc-rar" style="color:' + r.color + '">' + r.name + ' · ' + G.SLOT_BY_KEY[it.slot].name + '</div>' +
         '</button>';
     }).join("");
+    const chips = [];
+    if (equipN) chips.push('<span class="bs-chip new">자동 장착 ' + equipN + '</span>');
+    if (storedN) chips.push('<span class="bs-chip">보관 ' + storedN + '</span>');
+    if (newN) chips.push('<span class="bs-chip new">NEW ' + newN + '</span>');
+    if (salvagedN) chips.push('<span class="bs-chip gone">분해 ' + salvagedN + '</span>');
+    const bestEq = S.equip[best.slot];
+    const bestUpgrade = !!best && !best.salvaged && (!bestEq || G.itemScore(best) > G.itemScore(bestEq));
     const html = '<button class="modal-close" data-close>' + svg("close") + '</button>' +
       '<div class="modal-title">10연 개봉 결과</div>' +
-      '<div class="modal-note" style="margin-bottom:8px;color:' + bestR.color + '">최고 등급 · ' + bestR.name + ' ' + esc(best.name) + '</div>' +
+      '<div class="modal-note" style="margin-bottom:6px;color:' + bestR.color + '">최고 등급 · ' + bestR.name + ' ' + esc(best.name) + '</div>' +
+      (chips.length ? '<div class="batch-summary">' + chips.join("") + '</div>' : '') +
       '<div class="batch-grid">' + cells + '</div>' +
-      '<div class="batch-actions"><button class="btn btn-ghost" data-close>닫기</button>' +
+      '<div class="batch-actions">' +
+      (bestUpgrade ? '<button class="btn btn-gold wide" data-equip-best>' + svg("sword", "btn-ico") + ' 최고 등급 장착</button>' : '') +
       '<button class="btn btn-ghost" data-open-inv>보관함</button>' +
-      '<button class="btn btn-gold" data-salvage-low>영웅 미만 분해</button></div>';
+      '<button class="btn btn-ghost" data-salvage-low>희귀 이하 분해</button>' +
+      '<button class="btn btn-ghost" data-close>닫기</button>' +
+      '</div>';
     const back = openModal(html, "batch-modal");
+    const bestBtn = back.querySelector("[data-equip-best]");
+    if (bestBtn) bestBtn.addEventListener("click", () => {
+      G.equipItem(best);
+      G.tutorialDone("equip");
+      G.sfx("success");
+      haptic(20);
+      closeModal();
+      renderAll();
+      toast("⚔ " + best.name + " 장착 · 전투력 " + G.fmt(G.stats().power), "reward");
+    });
     back.querySelector("[data-salvage-low]").addEventListener("click", () => {
       const targets = items.filter((it) => !it.salvaged && rar(it.rarity).idx < 3);
       if (!targets.length) { toast("분해할 장비가 없습니다"); return; }
@@ -902,7 +985,7 @@
     let diff = mine - theirs;
     let sign = diff > 0.0001 ? "up" : diff < -0.0001 ? "down" : "same";
     const arrow = sign === "up" ? "▲" : sign === "down" ? "▼" : "–";
-    const fmt = (v) => (pct ? (Math.round(v * 10) / 10) + "%" : G.fmt(v));
+    const fmt = (v) => (pct && cfg ? cfg.fmt(v).replace("+", "") : pct ? (Math.round(v * 10) / 10) + "%" : G.fmt(v));
     return '<div class="cmp-row"><span class="cr-name">' + name + '</span>' +
       (isEq ? "" : '<span class="cr-val" style="color:#e8e2d4">' + fmt(mine) + '</span>') +
       '<span class="cr-diff ' + sign + '">' + (isEq ? "" : arrow + "&nbsp;" + (diff === 0 ? "0" : fmt(Math.abs(diff)))) + '</span></div>';
@@ -1034,6 +1117,22 @@
     $("#autoSalvage").addEventListener("change", (e) => { S.chest.autoSalvage = e.target.value; G.saveSoon(); });
     $("#recentClear").addEventListener("click", () => { ui.recent = []; renderRecent(); });
 
+    // 열쇠 구매
+    const buyKey = (n) => {
+      const res = G.buyKeys(n);
+      if (!res.ok) {
+        toast("🪙 골드가 부족합니다 · 열쇠 " + n + "개 " + G.fmt(res.cost) + " G", "break");
+        G.sfx("error");
+        return;
+      }
+      G.sfx("gold");
+      renderAll();
+    };
+    const bk1 = $("#buyKey1");
+    if (bk1) bk1.addEventListener("click", () => buyKey(1));
+    const bk10 = $("#buyKey10");
+    if (bk10) bk10.addEventListener("click", () => buyKey(10));
+
     // 모루
     $("#slotsGrid").addEventListener("click", (e) => {
       const b = e.target.closest("[data-slot]");
@@ -1138,10 +1237,27 @@
     });
     $("#enhanceBtn").addEventListener("click", () => {
       const res = G.enhance();
+      if (!res.ok && res.broke) {
+        // 파괴: 장비가 사라졌으니 모루와 화면을 즉시 정리한다
+        G.sfx("break");
+        haptic([20, 40, 30]);
+        const fv0 = $("#forgeVisual");
+        if (fv0) { fv0.classList.remove("flash"); void fv0.offsetWidth; fv0.classList.add("flash"); }
+        renderForgeAfterBreak();
+        return;
+      }
       if (!res.ok) {
         if (res.reason === "gold") { toast("🪙 골드가 부족합니다 · 비용 " + G.fmt(res.cost) + " G"); G.sfx("error"); }
         else if (res.reason === "max") toast("이미 +20 최대 강화입니다");
         else if (res.reason === "noitem") toast("모루에 장비를 올려주세요");
+        else {
+          // 망치질은 했지만 실패(유지/하락)
+          const fvf = $("#forgeVisual");
+          if (fvf) { fvf.classList.remove("flash"); void fvf.offsetWidth; fvf.classList.add("flash"); }
+          G.sfx("anvil"); setTimeout(() => G.sfx("fail"), 220); haptic(14);
+          if (res.downed) toast("💥 강화 실패 · 단계가 한 칸 내려갔습니다", "break");
+          renderAll();
+        }
         return;
       }
       G.tutorialDone("enhance");
@@ -1149,12 +1265,23 @@
       fv.classList.remove("flash");
       void fv.offsetWidth;
       fv.classList.add("flash");
-      if (res.broke) { G.sfx("break"); haptic([20, 40, 30]); }
-      else if (res.ok) { G.sfx("anvil"); setTimeout(() => G.sfx("success"), 180); haptic(24); }
-      else { G.sfx("anvil"); setTimeout(() => G.sfx("fail"), 220); }
+      G.sfx("anvil"); setTimeout(() => G.sfx("success"), 180); haptic(24);
+      if (res.milestone) {
+        const st = $("#fvStinger");
+        const tx = $("#fvStingerText");
+        if (st && tx) {
+          tx.textContent = "+" + res.lv;
+          st.classList.remove("on");
+          void st.offsetWidth;
+          st.classList.add("on");
+          setTimeout(() => st.classList.remove("on"), 1000);
+        }
+        fx.shake(4, 180);
+        haptic([18, 30, 18]);
+        toast("⚒ " + (res.name || "장비") + " +" + res.lv + " 달성! 강화 성공률이 더 어려워집니다", "reward");
+      }
       renderAll();
       renderSlots();
-      if (res.broke) renderForgeAfterBreak();
     });
     $("#protectToggle").addEventListener("change", (e) => { S.enhance.protect = e.target.checked; G.saveSoon(); });
     $("#sealBuy").addEventListener("click", () => {
@@ -1294,18 +1421,9 @@
     });
 
     // 보스 / 구역
-    $("#bossBtn").addEventListener("click", () => {
-      if (G.challengeBoss()) {
-        G.sfx("boss");
-        haptic([30, 60, 30]);
-        const layer = $("#fxLayer");
-        const b = document.createElement("div");
-        b.className = "boss-banner";
-        b.textContent = "👑 지배자 강림";
-        layer.appendChild(b);
-        setTimeout(() => b.remove(), 2300);
-      }
-    });
+    $("#bossBtn").addEventListener("click", startBossFight);
+    const bcta = $("#bossCta");
+    if (bcta) bcta.addEventListener("click", startBossFight);
     $("#stagePickBtn").addEventListener("click", showStagePicker);
 
     // 모달 공통
@@ -1315,7 +1433,40 @@
     document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
   }
 
-  function confirmModal(title, text, onOk) {
+  function startBossFight() {
+    if (!G.challengeBoss()) return false;
+    G.sfx("boss");
+    haptic([30, 60, 30]);
+    const layer = $("#fxLayer");
+    const b = document.createElement("div");
+    b.className = "boss-banner";
+    b.textContent = "👑 지배자 강림";
+    layer.appendChild(b);
+    setTimeout(() => b.remove(), 2300);
+    return true;
+  }
+
+  function showBossClear(st, drops) {
+    const w = G.WORLD_BY_ID[st.world];
+    const next = G.WORLD_BY_ID[st.world + 1];
+    const rw = [];
+    if (drops && drops.gold) rw.push('<span class="bc-reward gold">🪙 +' + G.fmt(drops.gold) + '</span>');
+    if (drops && drops.keys) rw.push('<span class="bc-reward key">🔑 +' + drops.keys + '</span>');
+    if (drops && drops.stones) rw.push('<span class="bc-reward stone">💠 +' + drops.stones + '</span>');
+    if (drops && drops.frags) rw.push('<span class="bc-reward frag">🩸 +' + drops.frags + '</span>');
+    const html = '<button class="modal-close" data-close>' + svg("close") + '</button>' +
+      '<div class="boss-clear">' +
+      '<div class="bc-crown">👑</div>' +
+      '<div class="bc-kicker">지배자 격파</div>' +
+      '<div class="bc-world">' + w.emoji + ' ' + w.name + '</div>' +
+      '<div class="bc-boss">' + st.name + '</div>' +
+      (rw.length ? '<div class="bc-rewards">' + rw.join("") + '</div>' : '') +
+      '<div class="bc-next">' + (next ? '세계 ' + next.id + ' <b>' + next.name + '</b> 해금' : '모든 세계 정복 · 종말의 성검을 손에 넣었습니다') + '</div>' +
+      '</div>' +
+      '<div class="confirm-actions"><button class="btn btn-gold" data-close>계속</button></div>';
+    const back = openModal(html, "boss-clear-modal");
+    back.querySelectorAll("[data-close]").forEach((b) => b.addEventListener("click", () => closeModal()));
+  }
     const html = '<div class="confirm-modal"><div class="confirm-icon">⚠️</div><div class="modal-title">' + title + '</div>' +
       '<div class="confirm-text">' + text + '</div><div class="confirm-actions">' +
       '<button class="btn btn-ghost" data-cancel>취소</button><button class="btn btn-danger" data-ok>확인</button></div></div>';
@@ -1390,6 +1541,7 @@
       haptic([40, 60, 40]);
     });
     G.bus.on("kill", (d) => {
+      ui.lastKill = d;
       const bits = ["<b>+" + G.fmt(d.gold) + " G</b>"];
       if (d.keys) bits.push("🔑+" + d.keys);
       if (d.stones) bits.push("💠+" + d.stones);
@@ -1430,6 +1582,7 @@
       toast("👑 " + w.name + " 정복! 세계 " + (st.world + 1) + " 해금", "reward");
       ui.musicMode = "forge";
       if (G.music) G.music("forge");
+      showBossClear(st, ui.lastKill);
       setTimeout(() => { renderAll(); stageChanged(); }, 300);
     });
     G.bus.on("frame", (v) => renderFrame(v));

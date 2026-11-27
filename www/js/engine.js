@@ -299,7 +299,13 @@
     try { localStorage.removeItem(G.SAVE_KEY); } catch (e) {}
     S = defaults();
     G.state = S;
+    S.keys = Math.max(S.keys, 10);
+    S.stones = Math.max(S.stones, 2);
+    G.seedStarter();
     combat.reset();
+    combat.maxHp = G.stats().maxHp;
+    combat.heroHp = combat.maxHp;
+    combat.killsInStage = 0;
     G.save(true);
   };
 
@@ -361,12 +367,14 @@
   G.grant = grant;
 
   /* ---------------- 상자 개봉 ---------------- */
+  let lastFullToast = 0;
+  let fullToastCount = 0;
   G.pull = function (count, opts) {
     const n = count === 10 ? 10 : 1;
     if (S.keys < n) return { ok: false, reason: "keys" };
     const results = [];
     const used = new Set();
-    let stored = 0, replaced = 0, fullDismantled = 0;
+    let stored = 0, replaced = 0, fullDismantled = 0, salvagedAuto = 0;
     for (let i = 0; i < n; i++) {
       S.keys -= 1;
       S.stats.pulls += 1;
@@ -378,18 +386,20 @@
       it.isNew = fresh;
       S.stats.bestRarity = Math.max(S.stats.bestRarity, G.RARITY_BY_KEY[it.rarity].idx);
       results.push(it);
+      // 지금 장착한 것보다 강한가? (자동 장착 대상)
+      const eqNow = S.equip[it.slot];
+      const upgrade = !eqNow || G.itemScore(it) > G.itemScore(eqNow);
+      // 자동 분해: 설정 등급 이하를 분해하되, 자동 장착 중이면 업그레이드는 남긴다
       if (S.chest.autoSalvage !== "none") {
         const threshold = G.RARITY_BY_KEY[S.chest.autoSalvage].idx;
         const rarIdx = G.RARITY_BY_KEY[it.rarity].idx;
-        if (rarIdx < threshold) { autoSalvage(it); it.salvaged = true; }
+        const keepForEquip = S.chest.autoEquip && upgrade;
+        if (rarIdx <= threshold && !keepForEquip) { autoSalvage(it); it.salvaged = true; salvagedAuto += 1; }
       }
       // 자동 장착: 지금 장착한 것보다 강하면 바로 장착
-      if (!it.salvaged && S.chest.autoEquip) {
-        const eq = S.equip[it.slot];
-        if (!eq || G.itemScore(it) > G.itemScore(eq)) {
-          G.equipItem(it, { silent: true });
-          it.equippedNow = true;
-        }
+      if (!it.salvaged && S.chest.autoEquip && upgrade) {
+        G.equipItem(it, { silent: true });
+        it.equippedNow = true;
       }
       // 나머지는 전부 보관함으로 — 개봉 카드를 놓치거나 닫아도 사라지지 않는다
       if (!it.salvaged && !it.equippedNow) {
@@ -401,13 +411,20 @@
     emit("pull", results);
     if (stored) emit("inventory", { kind: "add", items: results });
     if (replaced || fullDismantled) {
-      emit("toast", {
-        kind: "salvage",
-        text: "🎒 보관함이 가득 차 " + (replaced ? "약한 장비 " + replaced + "개 교체 분해" : "새 장비 " + fullDismantled + "개 분해")
-      });
+      fullToastCount += replaced + fullDismantled;
+      const now = Date.now();
+      if (now - lastFullToast > 9000) {
+        const n2 = fullToastCount;
+        fullToastCount = 0;
+        lastFullToast = now;
+        emit("toast", {
+          kind: "salvage",
+          text: "🎒 보관함이 가득 차 장비 " + n2 + "개를 분해했습니다 · 약한 것부터 정리하세요"
+        });
+      }
     }
     G.saveSoon();
-    return { ok: true, items: results, stored: stored, replaced: replaced, full: fullDismantled };
+    return { ok: true, items: results, stored: stored, replaced: replaced, full: fullDismantled, autoSalvaged: salvagedAuto };
   };
 
   function autoSalvage(it) {
@@ -648,9 +665,10 @@
       it.lv += 1;
       S.enhance.pity = 0;
       S.stats.maxEnh = Math.max(S.stats.maxEnh, it.lv);
-      emit("enhance", { ok: true, lv: it.lv, item: it });
+      const milestone = it.lv % 5 === 0;
+      emit("enhance", { ok: true, lv: it.lv, item: it, milestone: milestone });
       G.saveSoon();
-      return { ok: true, lv: it.lv };
+      return { ok: true, lv: it.lv, milestone: milestone, name: it.name }; 
     }
 
     // 실패
@@ -984,7 +1002,8 @@
         stage: st, enemy: this.enemy,
         heroHp: Math.max(0, Math.round(this.heroHp)), heroMax: Math.round(this.maxHp || stat.maxHp),
         respawn: this.respawn, bossFight: this.bossFight,
-        killsInStage: this.killsInStage || 0, combo: this.combo
+        killsInStage: this.killsInStage || 0, combo: this.combo,
+        bossReady: !!st.isBoss && !this.bossFight && !S.progress.cleared[st.key]
       };
     },
 
@@ -1074,6 +1093,7 @@
     if (r.fresh) {
       G.seedStarter();
       S.keys = Math.max(S.keys, 10);
+      S.stones = Math.max(S.stones, 2);
       G.save(true);
     }
     G.state = S;
