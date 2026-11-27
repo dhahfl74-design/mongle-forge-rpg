@@ -52,7 +52,7 @@
       milestones: {},
       research: { atk: 0, crit: 0, key: 0, gold: 0 },
       relics: {},
-      settings: { sound: true, haptics: true },
+      settings: { sound: true, music: true, haptics: true },
       tutorial: { idx: 0, skipped: false, collapsed: false, done: {}, shown: {} },
       achievements: { claimed: {}, notified: {} },
       stats: {
@@ -843,6 +843,7 @@
 
     heroAttack() {
       if (!this.enemy) return;
+      emit("heroAttack", { boss: this.enemy.boss });
       const st = G.stats();
       const stage = this.stage();
       let dmg = st.atk * rnd(0.86, 1.14);
@@ -877,7 +878,7 @@
         if (Math.random() < stat.keyChance) { drops.keys = 1; gainKeys(1); }
         if (Math.random() < G.BAL.stoneChance + S.research.key * 0.002) { drops.stones = 1; gainStones(1); }
       }
-      emit("kill", { gold: drops.gold, keys: drops.keys, stones: drops.stones, frags: drops.frags, boss: boss });
+      emit("kill", { gold: drops.gold, keys: drops.keys, stones: drops.stones, frags: drops.frags, boss: boss, bossName: boss ? st.name : "" });
       this.enemy = null;
 
       if (boss) {
@@ -963,6 +964,7 @@
       if (this.enemyT <= 0) {
         this.enemyT = this.enemy.interval;
         const dmg = Math.max(1, Math.round(this.enemy.atk * rnd(0.85, 1.15)));
+        emit("enemyAttack", { boss: this.enemy.boss });
         this.heroHp -= dmg;
         emit("heroHit", { dmg: dmg, hp: Math.max(0, this.heroHp), maxHp: this.maxHp });
         if (this.heroHp <= 0) {

@@ -9,7 +9,7 @@
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const svg = (name, cls) => '<svg class="' + (cls || "") + '"><use href="#i-' + name + '"/></svg>';
   const itemArt = (slot, rarity) => "./assets/items/" + slot + "_" + rarity + ".webp";
-  const iconImg = (o, cls) => '<img class="item-ico ' + (cls || "") + '" src="' + itemArt(o.slot, o.rarity) + '" alt="" draggable="false" loading="lazy" />';
+  const iconImg = (o, cls) => '<img class="item-ico ' + (cls || "") + '" src="' + itemArt(o.slot, o.rarity) + '" alt="" draggable="false" loading="eager" decoding="async" />';
   const rar = (k) => G.RARITY_BY_KEY[k] || G.RARITY[0];
 
   let S = null;
@@ -23,7 +23,9 @@
     lastEnemyKey: "",
     modal: null,
     lastFrame: 0,
-    interacted: false
+    interacted: false,
+    dmgSpots: [],
+    musicMode: ""
   };
 
   /* ================= 기본 렌더 ================= */
@@ -85,7 +87,7 @@
     const st = v.stage;
     $("#heroHpFill").style.width = (v.heroMax ? (v.heroHp / v.heroMax) * 100 : 0) + "%";
     $("#heroHpText").textContent = G.fmt(v.heroHp) + " / " + G.fmt(v.heroMax);
-    const side = $("#enemySide");
+    const foe = $("#foeUnit");
     const img = $("#enemyImg");
     const bar = $("#enemyHpFill");
     const barWrap = $(".hpbar.enemy");
@@ -97,11 +99,12 @@
         $("#enemyName").textContent = v.enemy.name;
         $("#enemyTag").textContent = v.enemy.boss ? "지배자" : "일반";
         $("#enemyTag").classList.toggle("normal", !v.enemy.boss);
-        side.classList.toggle("boss", v.enemy.boss);
-        barWrap.classList.toggle("boss", v.enemy.boss);
-        img.style.animation = "none";
-        void img.offsetWidth;
-        img.style.animation = "pageIn .3s ease";
+        foe.classList.toggle("boss", !!v.enemy.boss);
+        barWrap.classList.toggle("boss", !!v.enemy.boss);
+        foe.classList.remove("dying", "hit", "spawn");
+        void foe.offsetWidth;
+        foe.classList.add("spawn");
+        setTimeout(() => foe.classList.remove("spawn"), 380);
       }
       const pct = Math.max(0, (v.enemy.hp / v.enemy.maxHp) * 100);
       bar.style.width = pct + "%";
@@ -112,10 +115,22 @@
       $("#enemyTag").classList.toggle("normal", !st.isBoss);
       bar.style.width = "0%";
       $("#enemyHpText").textContent = st.isBoss ? "도전 대기" : "—";
-      img.src = st.art;
+      if (ui.lastEnemyKey.indexOf("idle|") !== 0) {
+        ui.lastEnemyKey = "idle|" + st.key;
+        img.src = st.art;
+      }
+      foe.classList.toggle("boss", !!st.isBoss);
     }
-    $("#comboChip").classList.toggle("show", v.combo >= 4);
-    $("#comboChip").textContent = "콤보 " + v.combo;
+    $("#heroUnitLv").textContent = "Lv." + S.hero.lv;
+    const chip = $("#comboChip");
+    chip.classList.toggle("show", v.combo >= 4);
+    const label = "콤보 " + v.combo;
+    if (chip.textContent !== label) {
+      chip.textContent = label;
+      chip.classList.remove("bump");
+      void chip.offsetWidth;
+      chip.classList.add("bump");
+    }
     $("#downBanner").classList.toggle("show", v.respawn > 0);
     $("#bossBtn").classList.toggle("show", st.isBoss && !S.progress.cleared[st.key] && !v.bossFight);
     const st2 = G.stats();
@@ -139,17 +154,88 @@
     d.style.left = xPct + "%";
     d.style.top = yPct + "%";
     layer.appendChild(d);
-    setTimeout(() => d.remove(), 1100);
+    setTimeout(() => d.remove(), 1050);
   }
   function hitFlash() {
     const f = $("#hitFlash");
     f.classList.remove("on");
     void f.offsetWidth;
     f.classList.add("on");
-    const side = $("#enemySide");
-    side.classList.remove("hit");
-    void side.offsetWidth;
-    side.classList.add("hit");
+    const foe = $("#foeUnit");
+    foe.classList.remove("hit");
+    void foe.offsetWidth;
+    foe.classList.add("hit");
+    setTimeout(() => foe.classList.remove("hit"), 280);
+  }
+
+  /* 화면 흔들림 · 히트스톱 */
+  const fx = {
+    shakeT: 0, shakeMag: 0, running: false,
+    shake(mag, ms) {
+      this.shakeMag = Math.max(this.shakeMag, mag);
+      this.shakeT = Math.max(this.shakeT, ms || 150);
+      if (this.running) return;
+      this.running = true;
+      const scene = $("#acScene");
+      const step = () => {
+        if (!scene) { this.running = false; return; }
+        if (this.shakeT > 0) {
+          const k = Math.min(1, this.shakeT / 160);
+          const dx = (Math.random() - .5) * this.shakeMag * k * 2;
+          const dy = (Math.random() - .5) * this.shakeMag * k * 2;
+          scene.style.transform = "translate(" + dx.toFixed(1) + "px," + dy.toFixed(1) + "px)";
+          this.shakeT -= 16;
+          this.shakeMag *= .9;
+          requestAnimationFrame(() => step());
+        } else {
+          scene.style.transform = "";
+          this.running = false;
+        }
+      };
+      requestAnimationFrame(step);
+    },
+    stop(ms) {
+      const app = $("#app");
+      if (!app) return;
+      app.classList.add("hitstop");
+      clearTimeout(this._st);
+      this._st = setTimeout(() => app.classList.remove("hitstop"), ms || 55);
+    }
+  };
+
+  function heroAttackAnim() {
+    const u = $("#heroUnit");
+    if (!u) return;
+    if (u.classList.contains("attack")) return;
+    u.classList.add("attack");
+    setTimeout(() => u.classList.remove("attack"), 360);
+  }
+
+  /* 무대의 불씨 */
+  function spawnEmbers() {
+    const box = $("#acEmbers");
+    if (!box) return;
+    box.innerHTML = "";
+    for (let i = 0; i < 14; i++) {
+      const e = document.createElement("i");
+      e.style.left = (6 + Math.random() * 88) + "%";
+      e.style.animationDuration = (4.5 + Math.random() * 5) + "s";
+      e.style.animationDelay = (Math.random() * 6) + "s";
+      e.style.setProperty("--ex", ((Math.random() - .5) * 60).toFixed(0) + "px");
+      e.style.opacity = "0";
+      e.style.width = e.style.height = (2 + Math.random() * 2.4).toFixed(1) + "px";
+      box.appendChild(e);
+    }
+  }
+
+  /* 아이콘 선로딩 — 10연 결과가 빈 카드로 뜨지 않게 */
+  function preloadItemArt() {
+    const list = ["weapon", "helm", "armor", "ring"];
+    const rars = G.RARITY.map((r) => r.key);
+    list.forEach((slot) => rars.forEach((rr) => {
+      const im = new Image();
+      im.src = itemArt(slot, rr);
+    }));
   }
 
   function haptic(ms) {
@@ -159,46 +245,116 @@
   }
 
   /* ================= 상자 ================= */
-  function playChestOpen(rarityIdx, cb) {
+  let chestToken = 0;
+  function playChestOpen(rarityIdx, done, opts) {
+    opts = opts || {};
+    const token = ++chestToken;
     const chest = $("#chestArt");
+    const scene = $("#chestScene");
+    const hero = $(".chest-hero");
     const beam = $("#beam");
+    const ring = $("#shockRing");
+    const stinger = $("#stinger");
+    const stingerName = $("#stingerName");
     const r = G.RARITY[rarityIdx] || G.RARITY[0];
-    chest.classList.remove("open");
+    const fast = !!opts.fast;
+    const timers = [];
+    let fired = false;
+    const at = (fn, ms) => timers.push(setTimeout(() => { if (token === chestToken) fn(); }, ms));
+    const clear = () => timers.forEach(clearTimeout);
+
+    chest.classList.remove("sealed", "crack", "open");
     beam.classList.remove("on");
-    beam.style.background = "linear-gradient(to top, " + r.beam + ", transparent 78%)";
-    chest.classList.add("shake");
-    G.sfx("chestShake");
-    haptic(18);
-    setTimeout(() => {
-      chest.classList.remove("shake");
+    ring.classList.remove("on");
+    stinger.classList.remove("on", "myth");
+    scene.style.setProperty("--rc", r.color);
+    scene.classList.toggle("myth", rarityIdx >= 5);
+    hero.classList.add("opening");
+    ui.chestBusy = true;
+    if (G.musicDuck) G.musicDuck(true);
+
+    const reveal = (skipped) => {
+      if (fired) return;
+      fired = true;
+      clear();
+      chest.classList.remove("sealed", "crack");
       chest.classList.add("open");
       beam.classList.add("on");
+      ring.classList.remove("on");
+      void ring.offsetWidth;
+      ring.classList.add("on");
+      stingerName.textContent = r.name;
+      stinger.classList.toggle("myth", rarityIdx >= 5);
+      stinger.classList.remove("on");
+      void stinger.offsetWidth;
+      stinger.classList.add("on");
       G.sfx("chestOpen");
+      G.sfx("reveal", rarityIdx);
       burstSparks(r.color, rarityIdx);
+      if (rarityIdx >= 3) { haptic([20, 30, 20]); fx.shake(5, 180); }
+      else haptic(16);
+      const delay = skipped ? 90 : 620;
       setTimeout(() => {
-        G.sfx("reveal", rarityIdx);
-        if (cb) cb();
-        setTimeout(() => { chest.classList.remove("open"); beam.classList.remove("on"); }, 1200);
-      }, 260);
-    }, 430);
+        if (token !== chestToken) return;
+        if (done) done();
+        ui.chestBusy = false;
+      }, delay);
+      setTimeout(() => {
+        if (token !== chestToken) return;
+        chest.classList.remove("open", "crack", "sealed");
+        beam.classList.remove("on");
+        ring.classList.remove("on");
+        stinger.classList.remove("on");
+        hero.classList.remove("opening");
+        scene.classList.remove("myth");
+        if (G.musicDuck) G.musicDuck(false);
+        ui.chestBusy = false;
+      }, delay + 700);
+    };
+
+    // 탭하면 3막으로 건너뛰기
+    const skip = () => { if (!fired) { G.sfx("tap"); reveal(true); } };
+    ui.skipChest = skip;
+    const skipBtn = $("#chestSkip");
+    if (skipBtn) skipBtn.onclick = skip;
+    scene.onclick = skip;
+
+    if (fast) {
+      chest.classList.add("crack");
+      G.sfx("chestShake");
+      at(() => reveal(true), 220);
+      return;
+    }
+
+    // 0막 봉인 → 1막 균열 → 2막 개방 → 3막 확정 → 4막 카드
+    chest.classList.add("sealed");
+    G.sfx("chestSeal");
+    at(() => {
+      chest.classList.remove("sealed");
+      chest.classList.add("crack");
+      G.sfx("chestShake");
+      haptic(14);
+    }, 300);
+    at(reveal, 900);
   }
 
   function burstSparks(color, power) {
     const box = $("#sparks");
     if (!box) return;
-    const n = 12 + power * 5;
+    const n = 18 + power * 7;
     for (let i = 0; i < n; i++) {
       const s = document.createElement("i");
       s.className = "spark";
       s.style.left = "50%";
-      s.style.top = "52%";
+      s.style.top = "48%";
       s.style.background = color;
-      s.style.boxShadow = "0 0 8px 2px " + color;
+      s.style.boxShadow = "0 0 10px 3px " + color;
+      s.style.width = s.style.height = (3 + Math.random() * 4).toFixed(1) + "px";
       const ang = Math.random() * Math.PI * 2;
-      const dist = 40 + Math.random() * (60 + power * 16);
+      const dist = 50 + Math.random() * (70 + power * 20);
       s.style.setProperty("--dx", Math.cos(ang) * dist + "px");
-      s.style.setProperty("--dy", (Math.sin(ang) * dist - 30) + "px");
-      s.style.animationDelay = (Math.random() * 0.15) + "s";
+      s.style.setProperty("--dy", (Math.sin(ang) * dist - 40) + "px");
+      s.style.animationDelay = (Math.random() * 0.14) + "s";
       box.appendChild(s);
       setTimeout(() => s.remove(), 1300);
     }
@@ -218,6 +374,7 @@
   }
 
   function doPull(n) {
+    if (ui.chestBusy) return;
     const res = G.pull(n);
     if (!res.ok) {
       G.sfx("error");
@@ -230,17 +387,18 @@
     }
     const items = res.items;
     const bestIdx = Math.max.apply(null, items.map((it) => rar(it.rarity).idx));
-    playChestOpen(bestIdx, () => {});
     items.forEach((it) => addRecent(it));
-    if (S.chest.auto && n === 1) {
-      // 자동 모드에서는 조용히
-      if (bestIdx >= 4) toast("[" + rar(items[0].rarity).name + "] " + items[0].name + " 획득!");
-    } else if (n === 10) {
-      setTimeout(() => showBatch(items), 620);
-    } else {
-      setTimeout(() => showReveal(items[0]), 620);
-    }
     renderAll();
+    if (S.chest.auto && n === 1) {
+      if (bestIdx >= 4) toast("[" + rar(items[0].rarity).name + "] " + items[0].name + " 획득!");
+      playChestOpen(bestIdx, null, { fast: true });
+      return;
+    }
+    if (G.music) G.music("forge");
+    playChestOpen(bestIdx, () => {
+      if (n === 10) showBatch(items);
+      else showReveal(items[0]);
+    });
   }
 
   function addRecent(it) {
@@ -535,6 +693,8 @@
 
   function renderSettings() {
     $("#setSound").checked = !!S.settings.sound;
+    const mu = $("#setMusic");
+    if (mu) mu.checked = S.settings.music !== false;
     $("#setHaptics").checked = !!S.settings.haptics;
     $("#soundBtn").innerHTML = svg(S.settings.sound ? "sound" : "mute");
     $("#tipList").innerHTML = G.TIPS.map((t) => "<li>" + t + "</li>").join("");
@@ -590,6 +750,7 @@
     $$(".page").forEach((p) => p.classList.toggle("active", p.id === "page-" + tab));
     if (tab === "codex") ui.newCodex = 0;
     if (tab === "forge") { clearInvNew(); renderInventory(); }
+    if (G.music && ui.musicMode !== "battle") G.music("forge");
     renderNav();
     renderCodex();
     $("#content").scrollTop = 0;
@@ -641,22 +802,25 @@
 
   function showBatch(items) {
     const best = items.reduce((a, b) => (rar(b.rarity).idx > rar(a.rarity).idx ? b : a), items[0]);
+    const bestR = rar(best.rarity);
     const cells = items.map((it, i) => {
       const r = rar(it.rarity);
-      return '<button class="batch-cell ' + (it === best ? "best" : "") + '" data-batch="' + i + '" style="--rc:' + r.color + ';border-color:' + r.color + '55">' +
+      return '<button class="batch-cell ' + (it === best ? "best" : "") + '" data-batch="' + i + '" style="--rc:' + r.color + ';--i:' + i + '">' +
         (it.isNew ? '<span class="bc-new"></span>' : '') +
+        (it.equippedNow ? '<span class="bc-eq">장착</span>' : '') +
         '<div class="bc-ico">' + iconImg(it) + '</div>' +
-        '<div class="bc-name" style="color:' + r.color + '">' + esc(it.name) + '</div></button>';
+        '<div class="bc-name">' + esc(it.name) + '</div>' +
+        '<div class="bc-rar" style="color:' + r.color + '">' + r.name + ' · ' + G.SLOT_BY_KEY[it.slot].name + '</div>' +
+        '</button>';
     }).join("");
     const html = '<button class="modal-close" data-close>' + svg("close") + '</button>' +
       '<div class="modal-title">10연 개봉 결과</div>' +
-      '<div class="modal-note" style="margin-bottom:9px">획득한 장비는 🎒 보관함에 저장됩니다</div>' +
+      '<div class="modal-note" style="margin-bottom:8px;color:' + bestR.color + '">최고 등급 · ' + bestR.name + ' ' + esc(best.name) + '</div>' +
       '<div class="batch-grid">' + cells + '</div>' +
       '<div class="batch-actions"><button class="btn btn-ghost" data-close>닫기</button>' +
       '<button class="btn btn-ghost" data-open-inv>보관함</button>' +
       '<button class="btn btn-gold" data-salvage-low>영웅 미만 분해</button></div>';
-    G.sfx("reveal", rar(best.rarity).idx);
-    const back = openModal(html);
+    const back = openModal(html, "batch-modal");
     back.querySelector("[data-salvage-low]").addEventListener("click", () => {
       const targets = items.filter((it) => !it.salvaged && rar(it.rarity).idx < 3);
       if (!targets.length) { toast("분해할 장비가 없습니다"); return; }
@@ -1041,9 +1205,17 @@
       S.settings.sound = !S.settings.sound;
       G.saveSoon();
       renderSettings();
+      if (G.audioRefresh) G.audioRefresh();
       if (S.settings.sound) G.sfx("tap");
     });
-    $("#setSound").addEventListener("change", (e) => { S.settings.sound = e.target.checked; G.saveSoon(); renderSettings(); if (S.settings.sound) G.sfx("tap"); });
+    $("#setSound").addEventListener("change", (e) => { S.settings.sound = e.target.checked; G.saveSoon(); renderSettings(); if (G.audioRefresh) G.audioRefresh(); if (S.settings.sound) G.sfx("tap"); });
+    const setMusic = $("#setMusic");
+    if (setMusic) setMusic.addEventListener("change", (e) => {
+      S.settings.music = e.target.checked;
+      G.saveSoon();
+      if (G.audioRefresh) G.audioRefresh();
+      if (S.settings.music) { G.sfxUnlock(); if (G.music) G.music(ui.tab === "chest" ? "forge" : ui.musicMode || "forge", true); }
+    });
     $("#setHaptics").addEventListener("change", (e) => { S.settings.haptics = e.target.checked; G.saveSoon(); renderSettings(); });
     $("#tutorialReplay").addEventListener("click", () => {
       S.tutorial = { idx: 0, skipped: false, collapsed: false, done: {}, shown: {} };
@@ -1130,9 +1302,6 @@
       }
     });
     $("#stagePickBtn").addEventListener("click", showStagePicker);
-    $$(".sb-stage, .arena").forEach((n) => n.addEventListener("click", () => {
-      if (ui.tab === "forge") return;
-    }));
 
     // 모달 공통
     document.addEventListener("click", (e) => {
@@ -1183,16 +1352,32 @@
   function bindBattle() {
     const layer = $("#dmgLayer");
     G.bus.on("hit", (e) => {
-      const side = $("#enemySide").getBoundingClientRect();
-      const box = layer.getBoundingClientRect();
-      let x = 60 + Math.random() * 30;
-      let y = 35 + Math.random() * 30;
-      floatDmg((e.crit ? "★" : "") + G.fmt(e.dmg), e.crit ? "crit" : e.boss ? "boss" : "", 60 + Math.random() * 24, 48 + Math.random() * 22);
+      let x = 55 + Math.random() * 20;
+      let y = 38 + Math.random() * 16;
+      const now = performance.now();
+      ui.dmgSpots = (ui.dmgSpots || []).filter((s) => now - s.t < 340);
+      let guard = 0;
+      while (ui.dmgSpots.some((s) => Math.abs(s.x - x) < 10 && Math.abs(s.y - y) < 9) && guard++ < 14) {
+        y += 5.5;
+        if (y > 62) { y = 36; x += 6; if (x > 80) x = 56; }
+      }
+      ui.dmgSpots.push({ x: x, y: y, t: now });
+      floatDmg(G.fmt(e.dmg), e.crit ? "crit" : e.boss ? "boss" : "", x, y);
       hitFlash();
-      if (e.crit) { G.sfx("crit"); haptic(22); } else G.sfx("hit");
+      if (e.crit) { G.sfx("crit"); haptic(26); fx.shake(6.5, 190); fx.stop(60); }
+      else { G.sfx("hit"); fx.shake(2.6, 110); }
     });
+    G.bus.on("heroAttack", () => heroAttackAnim());
     G.bus.on("heroHit", (e) => {
-      floatDmg("-" + G.fmt(e.dmg), "hero-dmg", 22 + Math.random() * 10, 30 + Math.random() * 20);
+      floatDmg("-" + G.fmt(e.dmg), "hero-dmg", 13 + Math.random() * 10, 38 + Math.random() * 16);
+      const u = $("#heroUnit");
+      if (u) {
+        u.classList.remove("hurt");
+        void u.offsetWidth;
+        u.classList.add("hurt");
+        setTimeout(() => u.classList.remove("hurt"), 290);
+      }
+      fx.shake(3, 110);
     });
     G.bus.on("heroDown", () => {
       toast("💀 쓰러졌습니다 · " + G.BAL.respawnSec + "초 후 재정비", "break");
@@ -1205,16 +1390,30 @@
       if (d.stones) bits.push("💠+" + d.stones);
       if (d.frags) bits.push("🩸+" + d.frags);
       $("#dropLine").innerHTML = bits.join(" · ");
-      floatDmg("+" + G.fmt(d.gold) + " G", "gold", 68 + Math.random() * 14, 76);
+      floatDmg("+" + G.fmt(d.gold) + " G", "gold", 60 + Math.random() * 14, 66);
+      const foe = $("#foeUnit");
+      if (foe) {
+        foe.classList.remove("dying");
+        void foe.offsetWidth;
+        foe.classList.add("dying");
+      }
       if (d.boss) {
         toast("👑 " + d.bossName + " 격파!", "reward");
         G.sfx("levelup");
         haptic([30, 50, 30, 50]);
+        fx.shake(8, 320);
+        fx.stop(90);
       }
       renderWallet("gold");
     });
     G.bus.on("spawn", (e) => {
-      if (e.boss) { G.sfx("boss"); }
+      const foe = $("#foeUnit");
+      if (foe) foe.classList.remove("dying");
+      if (e.boss) {
+        G.sfx("boss");
+        ui.musicMode = "battle";
+        if (G.music) G.music("battle");
+      }
     });
     G.bus.on("stage", () => { stageChanged(); });
     G.bus.on("stageClear", (st) => {
@@ -1224,6 +1423,8 @@
     G.bus.on("bossClear", (st) => {
       const w = G.WORLD_BY_ID[st.world];
       toast("👑 " + w.name + " 정복! 세계 " + (st.world + 1) + " 해금", "reward");
+      ui.musicMode = "forge";
+      if (G.music) G.music("forge");
       setTimeout(() => { renderAll(); stageChanged(); }, 300);
     });
     G.bus.on("frame", (v) => renderFrame(v));
@@ -1276,10 +1477,13 @@
 
     bindEvents();
     bindBattle();
+    spawnEmbers();
+    preloadItemArt();
     G.autoDemote();
     renderAll();
     updateAuto();
     stageChanged();
+    if (G.music) G.music("forge");
     G.startLoop();
 
     // 저장 표시
@@ -1303,6 +1507,7 @@
     window.__ui = ui;
     window.__renderAll = renderAll;
     window.__showReveal = showReveal;
+    window.__chest = playChestOpen;
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);

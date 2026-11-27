@@ -13,8 +13,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Gothic+A1:wght@400;500;700;800;900&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="./css/style.css?v=5.1.0" />
+<link rel="stylesheet" href="./css/style.css?v=5.2.0" />
 <link rel="preload" as="image" href="./assets/items/chest-ornate.webp" />
+<link rel="preload" as="image" href="./assets/arena-bg.jpg" />
+<link rel="preload" as="image" href="./assets/hero.png" />
+<link rel="preload" as="image" href="./assets/monster-undead.png" />
 <title>심연의 대장간 · 강화 수집 상자깡</title>
 <script>
   window.__APP_ERRORS = [];
@@ -71,48 +74,55 @@
     <button class="icon-btn" id="soundBtn" aria-label="소리 켜고 끄기"><svg><use href="#i-sound"/></svg></button>
   </header>
 
-  <!-- ================= 자동 전장 ================= -->
-  <section class="stagebar" id="stageBar">
-    <div class="sb-top">
+  <!-- ================= 전장 (자동 전투 무대) ================= -->
+  <section class="arena-card" id="stageBar">
+    <div class="ac-bg"></div>
+    <div class="ac-fog"></div>
+    <div class="ac-floor"></div>
+    <div class="ac-embers" id="acEmbers" aria-hidden="true"></div>
+
+    <div class="ac-top">
       <div class="sb-stage">
         <span class="sb-flag" id="sbWorldEmoji">🌫️</span>
         <b id="sbLabel">1-1</b>
         <span class="sb-name" id="sbName">잿빛 황야</span>
       </div>
       <div class="sb-pips" id="sbPips"></div>
-      <button class="boss-btn" id="bossBtn"><span>👑 보스 도전</span></button>
+      <button class="boss-btn" id="bossBtn"><span>보스 도전</span></button>
       <button class="mini-btn" id="stagePickBtn">구역<svg><use href="#i-arrow"/></svg></button>
     </div>
 
-    <div class="arena">
-      <div class="fighter hero-side">
-        <div class="portrait"><img src="./assets/hero.png" alt="서약자" /></div>
-        <div class="fmeta">
-          <div class="fline"><b>서약자</b><span class="flv" id="heroLv">Lv.1</span></div>
-          <div class="hpbar hero"><i id="heroHpFill"></i><span id="heroHpText">300 / 300</span></div>
-          <div class="hero-exp"><i id="heroExpFill"></i></div>
-        </div>
+    <div class="ac-scene" id="acScene">
+      <div class="side-hud hero-side" id="heroSideHud">
+        <div class="fline"><b>서약자</b><span class="flv" id="heroLv">Lv.1</span></div>
+        <div class="hpbar hero sm"><i id="heroHpFill"></i><span id="heroHpText">300 / 300</span></div>
+        <div class="hero-exp"><i id="heroExpFill"></i></div>
       </div>
 
-      <div class="arena-mid">
-        <div class="vs-mark">VS</div>
-        <div class="combo-chip" id="comboChip">콤보 0</div>
+      <div class="side-hud enemy-side" id="enemySide">
+        <div class="fline"><span class="fboss normal" id="enemyTag">일반</span><b id="enemyName">부패한 점액</b></div>
+        <div class="hpbar enemy sm"><i id="enemyHpFill"></i><span id="enemyHpText">0 / 0</span></div>
       </div>
 
-      <div class="fighter enemy-side" id="enemySide">
-        <div class="portrait"><img id="enemyImg" src="./assets/monster-undead.png" alt="적" /><div class="enemy-glow" id="enemyGlow"></div></div>
-        <div class="fmeta">
-          <div class="fline"><b id="enemyName">부패한 점액</b><span class="fboss" id="enemyTag">일반</span></div>
-          <div class="hpbar enemy"><i id="enemyHpFill"></i><span id="enemyHpText">0 / 0</span></div>
-        </div>
+      <div class="unit hero-unit" id="heroUnit">
+        <div class="u-shadow"></div>
+        <img class="u-img" src="./assets/hero.png" alt="서약자" draggable="false" />
+        <span class="u-lv" id="heroUnitLv">Lv.1</span>
       </div>
 
+      <div class="unit foe-unit" id="foeUnit">
+        <div class="u-shadow"></div>
+        <img class="u-img" id="enemyImg" src="./assets/monster-undead.png" alt="적" draggable="false" />
+        <div class="enemy-glow" id="enemyGlow"></div>
+      </div>
+
+      <div class="combo-chip" id="comboChip">콤보 0</div>
       <div class="dmg-layer" id="dmgLayer"></div>
       <div class="hit-flash" id="hitFlash"></div>
       <div class="down-banner" id="downBanner">쓰러졌습니다 · 재정비 중</div>
     </div>
 
-    <div class="sb-bottom">
+    <div class="ac-bottom">
       <div class="power-line">전투력 <b id="powerVal">0</b> <span id="powerRec">/ 권장 0</span></div>
       <div class="drop-line" id="dropLine"><span class="dl-idle">사냥 중…</span></div>
     </div>
@@ -131,11 +141,19 @@
           <div class="floor-glow"></div>
           <div class="chest" id="chestArt">
             <div class="chest-halo"></div>
-            <img class="chest-img" src="./assets/items/chest-ornate.webp" alt="심연의 상자" draggable="false" />
+            <div class="chest-rays" id="chestRays"></div>
+            <div class="chest-inner"></div>
+            <img class="chest-img chest-base" src="./assets/items/chest-ornate.webp" alt="심연의 상자" draggable="false" />
+            <img class="chest-img chest-lid" src="./assets/items/chest-ornate.webp" alt="" aria-hidden="true" draggable="false" />
+            <div class="chest-seam" id="chestSeam"></div>
             <div class="chest-shine"></div>
           </div>
+          <div class="myth-blade" id="mythBlade"><img src="./assets/sword-mythic.png" alt="" draggable="false" /></div>
+          <div class="shock-ring" id="shockRing"></div>
+          <div class="stinger" id="stinger"><b id="stingerName">신화</b></div>
           <div class="sparks" id="sparks"></div>
           <div class="rise-cards" id="riseCards"></div>
+          <button class="chest-skip" id="chestSkip">탭하여 건너뛰기</button>
         </div>
 
         <div class="pull-row">
@@ -310,6 +328,7 @@
       <div class="card settings-card">
         <div class="card-head"><div class="ch-title"><span class="ch-ico">⚙</span><div><b>설정</b><span>진행은 자동 저장됩니다</span></div></div></div>
         <div class="set-row"><div><b>🔊 효과음</b><span>타격·강화·개봉 손맛</span></div><label class="switch-line" for="setSound"><span></span><input type="checkbox" id="setSound" /><i class="sw"></i></label></div>
+        <div class="set-row"><div><b>🎵 배경 음악</b><span>대장간·전투 분위기 음악</span></div><label class="switch-line" for="setMusic"><span></span><input type="checkbox" id="setMusic" /><i class="sw"></i></label></div>
         <div class="set-row"><div><b>📳 진동</b><span>치명타와 강화에 진동</span></div><label class="switch-line" for="setHaptics"><span></span><input type="checkbox" id="setHaptics" /><i class="sw"></i></label></div>
         <div class="set-row"><div><b>🎓 초보자 안내</b><span>4단계 안내를 다시 봅니다</span></div><button class="btn btn-ghost sm" id="tutorialReplay">다시 보기</button></div>
         <div class="set-row"><div><b>💾 저장 내보내기</b><span>백업 파일로 보관</span></div><button class="btn btn-ghost sm" id="exportBtn">내보내기</button></div>
@@ -324,9 +343,9 @@
       </div>
 
       <div class="credits">
-        <b>심연의 대장간 v5.1</b><br />
+        <b>심연의 대장간 v5.2</b><br />
         15세계 · 180구역 · 장비 72종 · 6등급 · 강화 +20 · 상자 20레벨<br />
-        상자깡 · 강화 · 수집 · 🎒 보관함
+        상자깡 · 강화 · 수집 · 🎒 보관함 · 전장 연출
       </div>
     </section>
   </main>
@@ -383,9 +402,9 @@
     });
   }
   </script>
-<script src="./js/data.js?v=5.1.0"></script>
-<script src="./js/audio.js?v=5.1.0"></script>
-<script src="./js/engine.js?v=5.1.0"></script>
-<script src="./js/ui.js?v=5.1.0"></script>
+<script src="./js/data.js?v=5.2.0"></script>
+<script src="./js/audio.js?v=5.2.0"></script>
+<script src="./js/engine.js?v=5.2.0"></script>
+<script src="./js/ui.js?v=5.2.0"></script>
 </body>
 </html>
